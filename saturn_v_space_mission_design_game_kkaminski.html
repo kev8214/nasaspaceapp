@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SATURN V // Integrated Space Mission Design & Telemetry Bay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-navy: #071324;
+      --bg-panel: #0b1d36;
+      --bg-card: #102849;
+      --cyan-bright: #38bdf8;
+      --cyan-glow: rgba(56, 189, 248, 0.35);
+      --grid-minor: rgba(56, 189, 248, 0.08);
+      --grid-major: rgba(56, 189, 248, 0.18);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-navy);
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Aerospace Blueprint Grid Background */
+    .blueprint-grid {
+      background-color: #071426;
+      background-image:
+        linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+        linear-gradient(to right, var(--grid-minor) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-minor) 1px, transparent 1px);
+      background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+      background-position: center center;
+    }
+
+    /* Custom Scrollbar for Blueprint Panels */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #071324;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e3a5f;
+      border-radius: 9999px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+
+    /* Dedicated Visible Scrollbar for the Vehicle Assembly Bay */
+    .vab-scroll::-webkit-scrollbar {
+      width: 10px;
+    }
+    .vab-scroll::-webkit-scrollbar-track {
+      background: rgba(7, 20, 38, 0.9);
+      border-left: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    .vab-scroll::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.45);
+      border-radius: 9999px;
+      border: 2px solid #071426;
+    }
+    .vab-scroll::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+
+    /* Rocket Stack Hover & Drag Effects */
+    .module-card {
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .module-card:hover {
+      transform: translateY(-1px);
+      border-color: #38bdf8;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.18);
+    }
+
+    .drop-zone-active {
+      box-shadow: inset 0 0 35px rgba(56, 189, 248, 0.35);
+      border-color: #38bdf8 !important;
+    }
+
+    .rocket-slot {
+      transition: all 0.18s ease;
+    }
+    .rocket-slot:hover .slot-controls {
+      opacity: 1;
+    }
+
+    /* Subtle Blueprint Pulse */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(1000%); }
+    }
+    .blueprint-scanline {
+      animation: scanline 9s linear infinite;
+      background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.06), transparent);
+      height: 60px;
+      pointer-events: none;
+    }
+
+    /* Exhaust Flame Animation during Launch */
+    @keyframes flicker {
+      0%, 100% { transform: scaleY(1) scaleX(1); opacity: 0.95; }
+      50% { transform: scaleY(1.18) scaleX(0.92); opacity: 1; }
+    }
+    .flame-active {
+      transform-origin: top center;
+      animation: flicker 0.08s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col select-none">
+
+  <!-- TOP COMMAND HEADER -->
+  <header class="bg-[#09182e] border-b border-sky-500/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 z-30 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-sky-500/15 border border-sky-400/50 flex items-center justify-center text-sky-300 font-mono-tech font-bold text-sm shadow-inner">
+        SV-5
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-bold tracking-wider uppercase text-sky-100">
+            SATURN V // Mission Architecture & Flight Systems
+          </h1>
+          <span class="hidden md:inline-block text-[10px] font-mono-tech px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+            BLUEPRINT REV 1969.B
+          </span>
+        </div>
+        <p class="text-[11px] text-sky-300/70 hidden sm:block">
+          Integrated Systems Engineering Sandbox • Balance Δv, Mass, Power, Comms, Science & Budget
+        </p>
+      </div>
+    </div>
+
+    <!-- Mission & Orbit Selectors + Mode Toggle -->
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+      <!-- Scenario Selector -->
+      <div class="flex flex-col">
+        <label for="missionSelect" class="text-[10px] font-mono-tech uppercase text-sky-400/80">Mission Profile</label>
+        <select id="missionSelect" class="bg-[#0e2442] text-xs font-mono-tech text-sky-100 border border-sky-500/40 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-sky-400">
+          <option value="leo_obs">01. LEO Earth Observation</option>
+          <option value="gto_comms">02. GTO Deep Relay Sat</option>
+          <option value="lunar_recon">03. Lunar Orbital Recon</option>
+          <option value="apollo_landing">04. Apollo Lunar Landing & Return</option>
+          <option value="sandbox">05. Open Engineering Sandbox</option>
+        </select>
+      </div>
+
+      <!-- Target Orbit Selector -->
+      <div class="flex flex-col">
+        <label for="orbitSelect" class="text-[10px] font-mono-tech uppercase text-sky-400/80">Target Trajectory</label>
+        <select id="orbitSelect" class="bg-[#0e2442] text-xs font-mono-tech text-sky-100 border border-sky-500/40 rounded-md px-2.5 py-1.5 focus:outline-none focus:border-sky-400">
+          <option value="leo">LEO (400 km) — 9,400 m/s Δv</option>
+          <option value="gto">GTO/MEO (35,786 km) — 11,800 m/s Δv</option>
+          <option value="lunar_orbit">Lunar Orbit (LLO) — 13,400 m/s Δv</option>
+          <option value="lunar_return">Lunar Surface + Return — 16,200 m/s Δv</option>
+        </select>
+      </div>
+
+      <!-- Audio Telemetry Toggle -->
+      <button id="btnToggleAudio" class="mt-3 sm:mt-4 px-2.5 py-1.5 rounded-md bg-sky-950/80 hover:bg-sky-800/60 border border-sky-400/40 text-cyan-300 text-xs font-mono-tech flex items-center gap-1.5 transition" title="Toggle Mission Control Audio & Sound Effects">
+        <span id="audioIcon">🔊</span>
+        <span id="audioLabel" class="hidden md:inline">SFX ON</span>
+      </button>
+
+      <!-- Field Guide / Help Modal Button -->
+      <button id="btnOpenGuide" class="mt-3 sm:mt-4 px-2.5 py-1.5 rounded-md bg-sky-950/80 hover:bg-sky-800/60 border border-sky-400/40 text-sky-200 text-xs font-mono-tech flex items-center gap-1.5 transition" title="Engineering Field Manual">
+        <span>📘</span>
+        <span class="hidden md:inline">Field Guide</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MISSION BRIEFING STRIP -->
+  <section class="bg-[#0b1f3a]/95 border-b border-sky-500/25 px-4 py-2 flex flex-col lg:flex-row lg:items-center justify-between gap-2 text-xs">
+    <div class="flex items-start sm:items-center gap-2.5">
+      <span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono-tech text-[11px] font-semibold shrink-0">
+        OBJECTIVE
+      </span>
+      <p id="missionBriefText" class="text-sky-100/90 leading-snug">
+        Deploy an Earth observation platform into Low Earth Orbit (LEO) with active solar power, scientific imaging, and ground telemetry within budget.
+      </p>
+    </div>
+
+    <!-- Requirement Pills -->
+    <div id="missionReqBadges" class="flex flex-wrap items-center gap-1.5 font-mono-tech text-[11px]">
+      <!-- Dynamically populated -->
+    </div>
+  </section>
+
+  <!-- MAIN 3-COLUMN ENGINEERING WORKSPACE -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0">
+
+    <!-- LEFT SIDEBAR: MODULAR COMPONENT PALETTE -->
+    <aside class="lg:col-span-3 bg-[#0a1b33] border-b lg:border-b-0 lg:border-r border-sky-500/25 flex flex-col max-h-[460px] lg:max-h-[calc(100vh-118px)]">
+      <div class="p-3 border-b border-sky-500/20 flex items-center justify-between bg-[#081629]">
+        <div>
+          <h2 class="text-xs font-mono-tech font-bold uppercase tracking-wider text-sky-300">
+            Hardware Inventory
+          </h2>
+          <p class="text-[11px] text-sky-400/70">Drag or tap <span class="text-sky-200 font-semibold">+ Add</span> to stack vertically</p>
+        </div>
+        <button id="btnLoadPreset" class="text-[11px] font-mono-tech px-2 py-1 rounded bg-sky-500/15 hover:bg-sky-500/30 text-sky-300 border border-sky-400/30 transition" title="Auto-assemble a baseline Saturn V configuration for the current mission">
+          Auto-Stack
+        </button>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="flex border-b border-sky-500/20 bg-[#081526] text-[11px] font-mono-tech overflow-x-auto">
+        <button data-cat="all" class="cat-tab flex-1 py-2 px-2 text-center font-semibold text-sky-300 border-b-2 border-sky-400">ALL</button>
+        <button data-cat="cockpit" class="cat-tab flex-1 py-2 px-2 text-center text-sky-400/70 hover:text-sky-200">COCKPIT</button>
+        <button data-cat="payload" class="cat-tab flex-1 py-2 px-2 text-center text-sky-400/70 hover:text-sky-200">PAYLOAD</button>
+        <button data-cat="tank" class="cat-tab flex-1 py-2 px-2 text-center text-sky-400/70 hover:text-sky-200">TANKS</button>
+        <button data-cat="engine" class="cat-tab flex-1 py-2 px-2 text-center text-sky-400/70 hover:text-sky-200">ENGINES</button>
+      </div>
+
+      <!-- Scrollable Component List -->
+      <div id="componentPalette" class="p-3 space-y-2.5 overflow-y-auto flex-1">
+        <!-- Populated dynamically via JS -->
+      </div>
+    </aside>
+
+    <!-- CENTER WORKSPACE: VERTICAL ASSEMBLY BAY (VAB) BLUEPRINT CANVAS -->
+    <section class="lg:col-span-5 blueprint-grid relative flex flex-col justify-between h-[560px] lg:h-[calc(100vh-112px)] overflow-hidden">
+      <!-- Animated Blueprint Scanline -->
+      <div class="blueprint-scanline absolute inset-x-0 top-0 z-0"></div>
+
+      <!-- Top Blueprint HUD Overlay with 1:1 Synchronized Height Progress Bar -->
+      <div class="relative z-20 p-3 bg-[#071426]/90 backdrop-blur-sm border-b border-sky-500/30 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex-1 min-w-[210px]">
+          <div class="flex items-center justify-between text-[10px] font-mono-tech text-sky-400 uppercase tracking-wider">
+            <span>Vehicle Assembly Bay // Pad 39A</span>
+            <span>STAGES: <strong id="hudStageCount" class="text-cyan-300">0</strong> • PARTS: <strong id="hudPartCount" class="text-cyan-300">0</strong></span>
+          </div>
+          <div class="flex items-center justify-between mt-1 text-xs font-mono-tech">
+            <span class="text-sky-200">STACK HEIGHT: <strong id="hudHeight" class="text-cyan-300">0.0 / 110.6 m</strong></span>
+            <span id="hudHeightPct" class="text-[11px] font-bold text-cyan-300">0.0%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-sky-500/30 mt-1">
+            <div id="hudHeightBar" class="h-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-200" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button id="btnClearRocket" class="px-2.5 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 text-xs font-mono-tech transition">
+            Clear Stack
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Interactive Drop Zone & Rocket Stack Visualizer -->
+      <div id="assemblyDropZone" class="vab-scroll relative z-10 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-6 pb-6 border-2 border-dashed border-transparent transition-all">
+        <div class="min-h-full w-full flex flex-col items-center justify-end relative">
+          <!-- Altitude / Height Ruler on Left of Bay -->
+          <div class="hidden sm:flex flex-col justify-between h-full min-h-[380px] absolute left-1 top-0 bottom-4 text-[10px] font-mono-tech text-sky-400/55 pointer-events-none select-none border-l border-sky-400/30 pl-1.5">
+            <span>110.6m —</span>
+            <span>100m —</span>
+            <span>90m —</span>
+            <span>80m —</span>
+            <span>70m —</span>
+            <span>60m —</span>
+            <span>50m —</span>
+            <span>40m —</span>
+            <span>30m —</span>
+            <span>20m —</span>
+            <span>10m —</span>
+            <span>0m [PAD]</span>
+          </div>
+
+          <!-- Empty State Prompt -->
+          <div id="emptyBayPrompt" class="my-auto text-center max-w-xs p-5 rounded-xl bg-[#091b34]/90 border border-sky-500/30 shadow-xl">
+            <div class="w-12 h-12 mx-auto mb-2.5 rounded-full bg-sky-500/15 border border-sky-400/40 flex items-center justify-center text-sky-300 text-xl">
+              🚀
+            </div>
+            <h3 class="font-mono-tech text-sm font-bold text-sky-100 uppercase">Assembly Bay Empty</h3>
+            <p class="text-xs text-sky-300/80 mt-1 leading-relaxed">
+              Drag & drop modules from the left inventory here—or click <span class="text-cyan-300 font-semibold">+ Add</span>—starting from your command capsule down to heavy F-1 engines.
+            </p>
+          </div>
+
+          <!-- Vertical Rocket Stack Container -->
+          <div id="rocketStackContainer" class="w-full max-w-md flex flex-col items-center justify-end space-y-0.5 z-10">
+            <!-- Stacked Rocket Modules Render Here -->
+          </div>
+
+          <!-- Launch Pad Base Platform -->
+          <div class="w-72 sm:w-80 mt-1 shrink-0 flex flex-col items-center pointer-events-none">
+            <div class="w-full h-3 bg-gradient-to-r from-slate-800 via-sky-900 to-slate-800 border border-sky-400/50 rounded-t-sm"></div>
+            <div class="w-[110%] h-2.5 bg-[#0d223f] border-x border-b border-sky-500/40 flex justify-between px-4 items-center">
+              <span class="text-[8px] font-mono-tech text-sky-400/70">LUT-39A MOBILE LAUNCHER</span>
+              <span class="text-[8px] font-mono-tech text-sky-400/70">FLAME TRENCH</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Launch Action Bar -->
+      <div class="relative z-20 bg-[#08172b]/95 border-t border-sky-500/30 p-3 flex flex-wrap items-center justify-between gap-3">
+        <div id="goNoGoSummary" class="flex items-center gap-2 text-xs font-mono-tech">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+          <span class="text-rose-300">NO-GO: Add command module, fuel & engine</span>
+        </div>
+
+        <button id="btnLaunchMission" class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-slate-950 font-mono-tech font-bold text-xs sm:text-sm tracking-wider uppercase shadow-lg shadow-cyan-500/25 transition transform active:scale-95 flex items-center justify-center gap-2">
+          <span>🚀</span>
+          <span>Launch</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: REAL-TIME SYSTEMS & RESOURCE TELEMETRY -->
+    <aside class="lg:col-span-4 bg-[#0a1b33] border-t lg:border-t-0 lg:border-l border-sky-500/25 flex flex-col max-h-[640px] lg:max-h-[calc(100vh-118px)]">
+      <div class="p-3 border-b border-sky-500/20 bg-[#081629] flex items-center justify-between">
+        <div>
+          <h2 class="text-xs font-mono-tech font-bold uppercase tracking-wider text-sky-300">
+            Real-Time Telemetry & Trade-Offs
+          </h2>
+          <p class="text-[11px] text-sky-400/70">Live Tsiolkovsky Δv, power, downlink & budget audit</p>
+        </div>
+        <span id="overallStatusPill" class="px-2 py-0.5 rounded font-mono-tech text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+          INCOMPLETE
+        </span>
+      </div>
+
+      <div class="p-3 space-y-3 overflow-y-auto flex-1">
+        <!-- 1. PROPULSION & DELTA-V CARD -->
+        <div class="bg-[#0e2342] border border-sky-500/30 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-mono-tech font-bold text-sky-200 uppercase">1. Propulsion & Orbital Δv</span>
+            <span id="statDeltaVBadge" class="text-[11px] font-mono-tech px-2 py-0.5 rounded bg-slate-800 text-sky-300">0 / 9,400 m/s</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-sky-500/20 mb-2">
+            <div id="barDeltaV" class="h-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-[11px] font-mono-tech">
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">LIFTOFF TWR</div>
+              <div id="statTWR" class="font-bold text-sm text-rose-400">0.00 g</div>
+              <div class="text-[9px] text-sky-400/60">Min: 1.20 g</div>
+            </div>
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">WET MASS</div>
+              <div id="statWetMass" class="font-bold text-sm text-sky-100">0 t</div>
+              <div id="statDryMass" class="text-[9px] text-sky-400/60">Dry: 0 t</div>
+            </div>
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">TOTAL THRUST</div>
+              <div id="statThrust" class="font-bold text-sm text-sky-100">0 kN</div>
+              <div id="statIsp" class="text-[9px] text-sky-400/60">Avg Isp: 0s</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ELECTRICAL POWER & ECLIPSE STORAGE -->
+        <div class="bg-[#0e2342] border border-sky-500/30 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-mono-tech font-bold text-sky-200 uppercase">2. Power & Eclipse Battery</span>
+            <span id="statPowerBadge" class="text-[11px] font-mono-tech px-2 py-0.5 rounded bg-slate-800 text-sky-300">0 W Net</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono-tech mb-2">
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">SOLAR GEN / LOAD</div>
+              <div id="statPowerGenLoad" class="font-bold text-sky-100">0W / 0W</div>
+            </div>
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">ECLIPSE SURVIVAL</div>
+              <div id="statBatteryTime" class="font-bold text-sky-100">0 min</div>
+            </div>
+          </div>
+          <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-sky-500/20">
+            <div id="barPower" class="h-full bg-amber-400 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- 3. SCIENCE VALUE, DATA RATE & COMMUNICATIONS -->
+        <div class="bg-[#0e2342] border border-sky-500/30 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-mono-tech font-bold text-sky-200 uppercase">3. Science & Telemetry Link</span>
+            <span id="statScienceBadge" class="text-[11px] font-mono-tech px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">0 SCI PTS</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] font-mono-tech">
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">DATA GEN vs LINK</div>
+              <div id="statCommsRatio" class="font-bold text-sky-100">0 / 0 Mbps</div>
+              <div id="statCommsNote" class="text-[9px] text-sky-400/60">Range factor: 1.0x</div>
+            </div>
+            <div class="bg-[#09182e] p-2 rounded-lg border border-sky-500/15">
+              <div class="text-sky-400/70 text-[10px]">RECOVERY / CREW</div>
+              <div id="statRecovery" class="font-bold text-sky-100">Uncrewed</div>
+              <div id="statParachuteNote" class="text-[9px] text-sky-400/60">Chutes: None</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. PROGRAM BUDGET & COST ALLOCATION -->
+        <div class="bg-[#0e2342] border border-sky-500/30 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-mono-tech font-bold text-sky-200 uppercase">4. Program Budget</span>
+            <span id="statBudgetBadge" class="text-[11px] font-mono-tech font-bold text-emerald-300">$0M / $250M</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-sky-500/20">
+            <div id="barBudget" class="h-full bg-emerald-400 transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- 5. LIVE SYSTEMS ENGINEERING ADVISOR (TRADE-OFF WARNINGS) -->
+        <div class="bg-[#08172c] border border-sky-500/30 rounded-xl p-3">
+          <div class="flex items-center gap-1.5 mb-2">
+            <span class="text-xs">📡</span>
+            <h3 class="text-xs font-mono-tech font-bold uppercase text-cyan-300">Systems Engineering Audit</h3>
+          </div>
+          <ul id="engineeringWarningsList" class="space-y-1.5 text-xs text-sky-100/90">
+            <!-- Populated dynamically -->
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- LAUNCH & MULTI-PHASE FLIGHT SIMULATION MODAL -->
+  <div id="simulationModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-[#08172c] border border-sky-400/50 rounded-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden shadow-2xl">
+      <!-- Modal Header -->
+      <div class="px-4 py-2.5 bg-[#0b203d] border-b border-sky-500/30 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <h2 class="font-mono-tech font-bold text-sm sm:text-base text-sky-100 uppercase tracking-wider">
+            Manual Flight Deck & Orbital Guidance
+          </h2>
+          <span id="simMissionTime" class="text-xs font-mono-tech px-2 py-0.5 rounded bg-sky-950 border border-sky-500/40 text-cyan-300">
+            MET T+00:00
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnEvaluateMission" class="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono-tech text-xs font-bold shadow transition">
+            ✓ Complete & Score Mission
+          </button>
+          <button id="btnCloseSimModal" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-200 font-mono-tech text-xs border border-sky-500/30">
+            ✕ Abort to VAB
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Content: Interactive Canvas + Manual Flight Controls + Live Orbital Telemetry -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto">
+        <!-- Left/Center: Interactive Flight Canvas & Pilot Controls -->
+        <div class="lg:col-span-7 blueprint-grid relative min-h-[380px] sm:min-h-[460px] flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-sky-500/30">
+          <canvas id="flightCanvas" class="w-full flex-1 block min-h-[260px]"></canvas>
+
+          <!-- Top Telemetry HUD Overlay -->
+          <div class="absolute top-3 left-3 right-3 flex flex-wrap items-start justify-between gap-2 pointer-events-none">
+            <div class="bg-[#071426]/90 border border-sky-400/40 rounded-lg px-3 py-1.5 font-mono-tech">
+              <div class="text-[10px] text-sky-400">STAGE / PROPELLANT</div>
+              <div id="simStageFuelLabel" class="text-xs sm:text-sm font-bold text-cyan-300">STG 1/1 • FUEL 100%</div>
+              <div id="simTwrGLabel" class="text-[10px] text-sky-300/80">TWR: 1.50g • Δv REM: 0 m/s</div>
+            </div>
+
+            <div class="bg-[#071426]/90 border border-sky-400/40 rounded-lg px-3 py-1.5 font-mono-tech text-right">
+              <div class="text-[10px] text-sky-400">ALTITUDE / VELOCITY</div>
+              <div id="simAltVelLabel" class="text-xs sm:text-sm font-bold text-sky-100">0.0 km • 0 m/s</div>
+              <div id="simApoPeriLabel" class="text-[10px] text-emerald-300">APO: 0 km • PERI: 0 km</div>
+            </div>
+          </div>
+
+          <!-- Interactive Manual Pilot Control Deck -->
+          <div class="bg-[#08172b]/95 border-t border-sky-500/35 p-2.5 sm:p-3 space-y-2.5 z-10">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono-tech text-xs">
+              <!-- 1. THROTTLE CONTROL -->
+              <div class="bg-[#0b1f3a] border border-sky-500/30 rounded-lg p-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] text-sky-400 font-bold">THROTTLE (W/S)</span>
+                  <span id="hudThrottleVal" class="text-amber-300 font-bold">100%</span>
+                </div>
+                <input id="throttleSlider" type="range" min="0" max="100" value="100" class="w-full accent-amber-400 cursor-pointer h-2 bg-slate-900 rounded-lg" />
+                <div class="flex gap-1 mt-1.5">
+                  <button id="btnThrottleZero" class="flex-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-sky-200 border border-sky-500/20">CUT (0%)</button>
+                  <button id="btnThrottleMax" class="flex-1 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/35 text-[10px] text-amber-200 border border-amber-400/40">MAX (100%)</button>
+                </div>
+              </div>
+
+              <!-- 2. PITCH / ATTITUDE STEERING -->
+              <div class="bg-[#0b1f3a] border border-sky-500/30 rounded-lg p-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] text-sky-400 font-bold">PITCH ANGLE (A/D)</span>
+                  <span id="hudPitchVal" class="text-cyan-300 font-bold">90° (UP)</span>
+                </div>
+                <input id="pitchSlider" type="range" min="-180" max="180" value="90" class="w-full accent-cyan-400 cursor-pointer h-2 bg-slate-900 rounded-lg" />
+                <div class="flex gap-1 mt-1.5">
+                  <button id="btnPitchLeft" class="flex-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-sky-200 border border-sky-500/20">↺ +5°</button>
+                  <button id="btnPitchPrograde" class="flex-1 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/35 text-[10px] text-cyan-200 border border-cyan-400/40">PROGRADE</button>
+                  <button id="btnPitchRight" class="flex-1 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-sky-200 border border-sky-500/20">↻ -5°</button>
+                </div>
+              </div>
+
+              <!-- 3. STAGING & TIME WARP -->
+              <div class="bg-[#0b1f3a] border border-sky-500/30 rounded-lg p-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] text-sky-400 font-bold">TIME WARP (, / .)</span>
+                  <span id="hudWarpVal" class="text-emerald-300 font-bold">1× REALTIME</span>
+                </div>
+                <div class="grid grid-cols-4 gap-1 my-0.5">
+                  <button data-warp="1" class="warp-btn py-1 rounded bg-emerald-500 text-slate-950 font-bold text-[10px]">1×</button>
+                  <button data-warp="3" class="warp-btn py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-200 text-[10px]">3×</button>
+                  <button data-warp="8" class="warp-btn py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-200 text-[10px]">8×</button>
+                  <button data-warp="20" class="warp-btn py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-200 text-[10px]">20×</button>
+                </div>
+                <button id="btnStageSep" class="w-full mt-1 py-1 rounded bg-rose-500/25 hover:bg-rose-500/40 border border-rose-400/50 text-rose-200 font-bold text-[10px] uppercase tracking-wider transition">
+                  ⚡ STAGE SEPARATION (SPACE)
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Flight Event Ticker -->
+            <div class="bg-[#061120] border border-sky-500/25 rounded-lg px-3 py-1.5 font-mono-tech text-[11px] text-cyan-200 flex items-center justify-between gap-2">
+              <span id="simEventLog" class="truncate">IGNITION READY: Throttle up & pitch east (gradually lower pitch from 90° to 0°) to build orbital velocity!</span>
+              <span id="simOrbitStatusTag" class="shrink-0 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px]">SUBORBITAL</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Flight Guidance & Post-Mission Engineering Evaluation Report -->
+        <div class="lg:col-span-5 p-4 bg-[#0a1c36] flex flex-col justify-between overflow-y-auto">
+          <div id="simRunningPlaceholder" class="space-y-3">
+            <div class="p-3 rounded-xl bg-[#071426] border border-cyan-500/35">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono-tech text-xs font-bold text-cyan-300 uppercase">🎯 Target Trajectory Parameters</span>
+                <span id="guideTargetOrbitName" class="font-mono-tech text-[11px] text-sky-300">LEO (400 km)</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 font-mono-tech text-[11px] mt-2">
+                <div class="bg-[#0b1f3a] p-2 rounded border border-sky-500/20">
+                  <div class="text-[9px] text-sky-400">TARGET ALTITUDE</div>
+                  <div id="guideTargetAlt" class="font-bold text-sky-100">≥ 160 km (Orbital)</div>
+                </div>
+                <div class="bg-[#0b1f3a] p-2 rounded border border-sky-500/20">
+                  <div class="text-[9px] text-sky-400">TARGET VELOCITY</div>
+                  <div id="guideTargetVel" class="font-bold text-sky-100">≥ 7,800 m/s</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Flight Systems & Eclipse Check -->
+            <div class="p-3 rounded-xl bg-[#071426] border border-sky-500/25 space-y-2 font-mono-tech text-xs">
+              <div class="font-bold text-sky-200 uppercase text-[11px]">Live Spacecraft Telemetry</div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-sky-400">Vertical Climb Rate:</span>
+                <span id="liveVertVel" class="text-sky-100 font-bold">0 m/s</span>
+              </div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-sky-400">Horizontal Orbital Speed:</span>
+                <span id="liveHorizVel" class="text-cyan-300 font-bold">0 m/s</span>
+              </div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-sky-400">Active Stage Isp / Thrust:</span>
+                <span id="liveStagePerf" class="text-amber-300 font-bold">0 s • 0 kN</span>
+              </div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-sky-400">Eclipse & Comms Link:</span>
+                <span id="liveSystemsStatus" class="text-emerald-300 font-bold">NOMINAL</span>
+              </div>
+            </div>
+
+            <!-- Flight Pilot Checklist -->
+            <div class="p-3 rounded-xl bg-[#08172c] border border-sky-500/25 text-xs text-sky-200/90 space-y-1.5 leading-relaxed">
+              <div class="font-mono-tech font-bold text-amber-300 text-[11px] uppercase">👨‍🚀 Ascent & Orbit Piloting Guide</div>
+              <p>1. <strong>Liftoff (0–15 km):</strong> Keep Pitch near <strong>90° (Vertical)</strong> at 100% throttle to clear dense lower atmosphere.</p>
+              <p>2. <strong>Gravity Turn (15–80 km):</strong> Gradually pitch right toward <strong>45° → 15°</strong> so thrust builds horizontal orbital speed.</p>
+              <p>3. <strong>Stage Separation:</strong> When a stage's fuel hits <strong>0%</strong>, press <kbd class="px-1.5 py-0.5 bg-slate-800 rounded text-cyan-300">SPACE</kbd> (or click <em>Stage Separation</em>) to jettison empty tanks and ignite the next stage.</p>
+              <p>4. <strong>Orbital Insertion & Time Warp:</strong> Circularize near <strong>0° pitch</strong> until Orbital Status turns <span class="text-emerald-300 font-bold">ORBIT ACHIEVED</span>, use <strong>3×–20× Time Warp</strong> to verify eclipse survival, then click <strong>Complete & Score Mission</strong>!</p>
+            </div>
+          </div>
+
+          <div id="postMissionReport" class="hidden space-y-3">
+            <!-- Outcome Header & Rank -->
+            <div id="reportBanner" class="p-3.5 rounded-xl border flex items-center justify-between">
+              <div>
+                <div id="reportVerdictTag" class="text-[10px] font-mono-tech font-bold uppercase tracking-widest">MISSION OUTCOME</div>
+                <h3 id="reportTitle" class="text-base sm:text-lg font-bold text-white mt-0.5">ORBITAL INSERTION CONFIRMED</h3>
+              </div>
+              <div class="text-center bg-slate-950/60 px-3 py-1.5 rounded-lg border border-white/15">
+                <div class="text-[9px] font-mono-tech text-sky-300 uppercase">RANK</div>
+                <div id="reportRank" class="text-2xl font-mono-tech font-extrabold text-amber-300">S</div>
+              </div>
+            </div>
+
+            <!-- Score Breakdown -->
+            <div class="grid grid-cols-3 gap-2 font-mono-tech text-center">
+              <div class="bg-[#071426] p-2 rounded-lg border border-sky-500/20">
+                <div class="text-[10px] text-sky-400">TOTAL SCORE</div>
+                <div id="repScore" class="text-sm font-bold text-cyan-300">0</div>
+              </div>
+              <div class="bg-[#071426] p-2 rounded-lg border border-sky-500/20">
+                <div class="text-[10px] text-sky-400">SCIENCE YIELD</div>
+                <div id="repScience" class="text-sm font-bold text-indigo-300">0 pts</div>
+              </div>
+              <div class="bg-[#071426] p-2 rounded-lg border border-sky-500/20">
+                <div class="text-[10px] text-sky-400">BUDGET EFF.</div>
+                <div id="repEfficiency" class="text-sm font-bold text-emerald-300">0%</div>
+              </div>
+            </div>
+
+            <!-- Root-Cause & Engineering Trade-Off Analysis -->
+            <div class="bg-[#071426] border border-sky-500/25 rounded-xl p-3">
+              <h4 class="text-xs font-mono-tech font-bold uppercase text-sky-300 mb-2">
+                Post-Flight Engineering Analysis
+              </h4>
+              <ul id="reportFindingsList" class="space-y-1.5 text-xs text-sky-100/90 leading-relaxed">
+                <!-- Populated dynamically -->
+              </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button id="btnReplaySim" class="flex-1 py-2 px-3 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 font-mono-tech text-xs font-semibold transition">
+                ↻ Replay Flight
+              </button>
+              <button id="btnModifyDesign" class="flex-1 py-2 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono-tech text-xs font-bold transition">
+                🛠 Iterate Design
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIELD GUIDE / EDUCATIONAL CONCEPTS MODAL -->
+  <div id="guideModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0b1f3a] border border-sky-400/50 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 bg-[#081629] border-b border-sky-500/30 flex items-center justify-between">
+        <h2 class="font-mono-tech font-bold text-sm text-sky-200 uppercase">📘 Saturn V Systems Engineering Field Guide</h2>
+        <button id="btnCloseGuide" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-200 font-mono-tech text-xs">✕ Close</button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3 text-xs text-sky-100/90 leading-relaxed">
+        <div class="p-3 rounded-xl bg-[#08172c] border border-sky-500/25">
+          <h3 class="font-mono-tech font-bold text-cyan-300 mb-1">1. Thrust-to-Weight Ratio (TWR) & Tsiolkovsky Δv</h3>
+          <p>To leave Pad 39A, your engines must produce more thrust than gravity pulls down (<strong>TWR &gt; 1.20 g</strong>). Once airborne, your <strong>Delta-V (Δv)</strong>—calculated via <code>Δv = Isp · g₀ · ln(m_wet / m_dry)</code>—determines how far you can go. Adding heavy payloads increases dry mass, shrinking Δv unless you add higher-efficiency stages (like J-2 vacuum engines) or larger fuel tanks.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#08172c] border border-sky-500/25">
+          <h3 class="font-mono-tech font-bold text-amber-300 mb-1">2. Power Generation vs. Orbital Eclipse</h3>
+          <p>Scientific instruments and high-gain radios continuously consume electrical power (Watts). Solar panels generate power in sunlight, but every orbit passes through planetary shadow (eclipse). You must carry <strong>Battery Packs</strong> sized to sustain your power draw through the eclipse window.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#08172c] border border-sky-500/25">
+          <h3 class="font-mono-tech font-bold text-indigo-300 mb-1">3. Communications Downlink & Distance</h3>
+          <p>High-resolution science equipment generates massive data streams (Mbps). Further destinations (GTO, Lunar Orbit) suffer free-space signal attenuation, reducing effective downlink bandwidth. Pair heavy science suites with a <strong>Deep-Space High-Gain Dish</strong> so data isn't lost.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#08172c] border border-sky-500/25">
+          <h3 class="font-mono-tech font-bold text-emerald-300 mb-1">4. Crew Safety & Atmospheric Re-Entry</h3>
+          <p>Crewed command modules (Apollo CM) and sample-return missions require <strong>Parachute Recovery Systems</strong> to survive atmospheric re-entry and splashdown. Uncrewed orbital satellites do not need parachutes, saving mass and budget.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION BANNER -->
+  <div id="toastBanner" class="fixed bottom-4 right-4 z-50 hidden bg-[#0c2547] border border-cyan-400 text-sky-100 font-mono-tech text-xs px-4 py-2.5 rounded-xl shadow-2xl">
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * TONE.JS AEROSPACE SOUND EFFECTS & TELEMETRY AUDIO SYNTHESIZER
+     * ============================================================================
+     */
+    const SoundFX = {
+      enabled: true,
+      initialized: false,
+      uiSynth: null,
+      chimeSynth: null,
+      noiseSynth: null,
+      rumbleSynth: null,
+      rumbleFilter: null,
+
+      async init() {
+        if (this.initialized || typeof Tone === 'undefined') return;
+        try {
+          await Tone.start();
+          this.uiSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.005, decay: 0.08, sustain: 0.02, release: 0.12 },
+            volume: -14
+          }).toDestination();
+
+          this.chimeSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.01, decay: 0.25, sustain: 0.1, release: 0.4 },
+            volume: -11
+          }).toDestination();
+
+          this.rumbleFilter = new Tone.Filter(140, 'lowpass').toDestination();
+          this.rumbleSynth = new Tone.NoiseSynth({
+            noise: { type: 'brown' },
+            envelope: { attack: 0.25, decay: 0.5, sustain: 0.8, release: 0.6 },
+            volume: -12
+          }).connect(this.rumbleFilter);
+
+          this.noiseSynth = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.005, decay: 0.18, sustain: 0, release: 0.1 },
+            volume: -16
+          }).toDestination();
+
+          this.initialized = true;
+        } catch (err) {
+          // Graceful fallback if audio context is blocked
+        }
+      },
+
+  
+      async playAttach(category) {
+        if (!this.enabled) return;
+        await this.init();
+        if (!this.uiSynth) return;
+        const notes = {
+          cockpit: ['E5', 'B5'],
+          payload: ['G5', 'D6'],
+          tank: ['C4', 'G4'],
+          engine: ['A3', 'E4']
+        };
+        const chord = notes[category] || ['C5', 'G5'];
+        this.uiSynth.triggerAttackRelease(chord[0], '16n');
+        setTimeout(() => {
+          if (this.enabled && this.uiSynth) this.uiSynth.triggerAttackRelease(chord[1], '16n');
+        }, 55);
+      },
+
+      async playRemove() {
+        if (!this.enabled) return;
+        await this.init();
+        if (!this.uiSynth) return;
+        this.uiSynth.triggerAttackRelease('G4', '32n');
+        setTimeout(() => {
+          if (this.enabled && this.uiSynth) this.uiSynth.triggerAttackRelease('C4', '16n');
+        }, 45);
+      },
+
+      async playStageSep() {
+        if (!this.enabled) return;
+        await this.init();
+        if (this.noiseSynth) this.noiseSynth.triggerAttackRelease('16n');
+        if (this.uiSynth) this.uiSynth.triggerAttackRelease('A5', '16n');
+      },
+
+      async startEngineRumble() {
+        if (!this.enabled) return;
+        await this.init();
+        if (this.rumbleSynth) {
+          this.rumbleFilter.frequency.value = 180;
+          this.rumbleSynth.triggerAttack();
+        }
+      },
+
+      updateEngineRumble(progressPct) {
+        if (!this.enabled || !this.rumbleFilter || !this.rumbleSynth) return;
+        // As rocket ascends into vacuum, muffle acoustic rumble
+        const freq = Math.max(45, 220 - progressPct * 1.8);
+        this.rumbleFilter.frequency.rampTo(freq, 0.1);
+      },
+
+      stopEngineRumble() {
+        if (this.rumbleSynth) {
+          try { this.rumbleSynth.triggerRelease(); } catch (e) {}
+        }
+      },
+
+      async playSuccess() {
+        if (!this.enabled) return;
+        await this.init();
+        if (!this.chimeSynth) return;
+        const notes = ['C5', 'E5', 'G5', 'C6'];
+        notes.forEach((n, idx) => {
+          setTimeout(() => {
+            if (this.enabled && this.chimeSynth) this.chimeSynth.triggerAttackRelease(n, '8n');
+          }, idx * 110);
+        });
+      },
+
+      async playWarning() {
+        if (!this.enabled) return;
+        await this.init();
+        if (!this.chimeSynth) return;
+        this.chimeSynth.triggerAttackRelease('F4', '8n');
+        setTimeout(() => {
+          if (this.enabled && this.chimeSynth) this.chimeSynth.triggerAttackRelease('D4', '4n');
+        }, 140);
+      },
+
+      async playFailure() {
+        if (!this.enabled) return;
+        await this.init();
+        if (this.noiseSynth) this.noiseSynth.triggerAttackRelease('4n');
+        if (this.chimeSynth) {
+          this.chimeSynth.triggerAttackRelease(['C3', 'F#3'], '2n');
+        }
+      }
+    };
+
+    /**
+     * ============================================================================
+     * SATURN V SPACE MISSION DESIGNER — CORE DATA, PHYSICS ENGINE & UI CONTROLLER
+     * ============================================================================
+     */
+
+    // 1. CATALOG OF MODULAR SATURN V & SPACECRAFT COMPONENTS
+    const COMPONENTS = [
+      // --- COCKPITS / COMMAND MODULES ---
+      {
+        id: 'apollo_cm',
+        name: 'Apollo Command Capsule',
+        category: 'cockpit',
+        tag: 'CREWED // 3 ASTRONAUTS',
+        widthClass: 'w-28',
+        heightMeters: 3.9,
+        dryMass: 5.8,      // metric tons
+        fuelMass: 0.1,
+        thrust: 0,         // kN
+        isp: 0,
+        powerGen: 0,       // Watts
+        powerDraw: 180,    // Watts
+        batteryWh: 1200,
+        sciencePts: 25,
+        dataGen: 1.5,      // Mbps
+        commsCap: 4.0,     // Mbps base
+        cost: 35,          // $ Millions
+        crewed: true,
+        isParachute: false,
+        desc: 'Pressurized 3-crew re-entry command module. Requires parachutes for safe splashdown.'
+      },
+      {
+        id: 'probe_core',
+        name: 'Automated Avionics Core',
+        category: 'cockpit',
+        tag: 'UNCREWED // PROBE BUS',
+        widthClass: 'w-28',
+        heightMeters: 2.2,
+        dryMass: 1.4,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 75,
+        batteryWh: 600,
+        sciencePts: 10,
+        dataGen: 0.5,
+        commsCap: 3.0,
+        cost: 12,
+        crewed: false,
+        isParachute: false,
+        desc: 'Lightweight autonomous flight computer & reaction wheels for robotic missions.'
+      },
+      {
+        id: 'deep_space_bus',
+        name: 'Deep-Space Star-Tracker Bus',
+        category: 'cockpit',
+        tag: 'UNCREWED // LONG-RANGE AI',
+        widthClass: 'w-32',
+        heightMeters: 2.6,
+        dryMass: 2.1,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 80,
+        powerDraw: 95,
+        batteryWh: 1600,
+        sciencePts: 20,
+        dataGen: 1.0,
+        commsCap: 6.5,
+        cost: 22,
+        crewed: false,
+        isParachute: false,
+        desc: 'Radiation-hardened autonomous bus with built-in star trackers, backup battery & S-band relay.'
+      },
+
+      // --- PAYLOADS (SOLAR, SCIENCE EQUIPMENT, BATTERIES, PARACHUTES, COMMS) ---
+      {
+        id: 'parachute_pack',
+        name: 'Triple Drogue & Main Chutes',
+        category: 'payload',
+        tag: 'RECOVERY SYSTEM',
+        widthClass: 'w-28',
+        heightMeters: 1.5,
+        dryMass: 0.9,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 10,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 8,
+        crewed: false,
+        isParachute: true,
+        desc: 'Essential thermal deceleration & triple-canopy recovery pack for crewed or sample return.'
+      },
+      {
+        id: 'solar_wings',
+        name: 'Deployable Solar Array Wings',
+        category: 'payload',
+        tag: 'POWER // +650W',
+        widthClass: 'w-32',
+        heightMeters: 2.0,
+        dryMass: 1.2,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 650,
+        powerDraw: 15,
+        batteryWh: 200,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 14,
+        crewed: false,
+        isParachute: false,
+        desc: 'Tracking photovoltaic wings generating 650W in sunlight. Zero output during eclipse.'
+      },
+      {
+        id: 'rtg_power',
+        name: 'SNAP-27 Radioisotope Generator',
+        category: 'payload',
+        tag: 'NUCLEAR // +420W CONTINUOUS',
+        widthClass: 'w-32',
+        heightMeters: 1.9,
+        dryMass: 1.8,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 420,
+        powerDraw: 0,
+        batteryWh: 4800,
+        sciencePts: 5,
+        dataGen: 0.2,
+        commsCap: 0,
+        cost: 29,
+        crewed: false,
+        isParachute: false,
+        desc: 'Plutonium-238 thermoelectric generator providing steady 420W power even in deep orbital shadow.'
+      },
+      {
+        id: 'battery_bank',
+        name: 'High-Density Li-Ion Battery',
+        category: 'payload',
+        tag: 'STORAGE // +3,600 Wh',
+        widthClass: 'w-32',
+        heightMeters: 1.8,
+        dryMass: 1.6,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 10,
+        batteryWh: 3600,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 11,
+        crewed: false,
+        isParachute: false,
+        desc: 'Stores 3,600 Wh of energy to keep science instruments alive during planetary shadow.'
+      },
+      {
+        id: 'magnetometer_boom',
+        name: 'Magnetometer & Plasma Boom',
+        category: 'payload',
+        tag: 'SCIENCE // +30 PTS (LOW POWER)',
+        widthClass: 'w-32',
+        heightMeters: 1.8,
+        dryMass: 0.8,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 65,
+        batteryWh: 0,
+        sciencePts: 30,
+        dataGen: 1.4,
+        commsCap: 0,
+        cost: 14,
+        crewed: false,
+        isParachute: false,
+        desc: 'Lightweight extendable fluxgate magnetometer & solar wind particle analyzer. Very low power draw.'
+      },
+      {
+        id: 'weather_radiometer',
+        name: 'Atmospheric IR Sounder & Lidar',
+        category: 'payload',
+        tag: 'SCIENCE // +48 PTS',
+        widthClass: 'w-34',
+        heightMeters: 2.5,
+        dryMass: 1.9,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 185,
+        batteryWh: 0,
+        sciencePts: 48,
+        dataGen: 3.8,
+        commsCap: 0,
+        cost: 21,
+        crewed: false,
+        isParachute: false,
+        desc: 'Infrared cloud-top radiometer & laser altimeter for climate, ocean, and terrain profiling.'
+      },
+      {
+        id: 'science_lab',
+        name: 'Multispectral Science Suite',
+        category: 'payload',
+        tag: 'SCIENCE // +65 PTS',
+        widthClass: 'w-36',
+        heightMeters: 3.4,
+        dryMass: 3.2,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 320,
+        batteryWh: 0,
+        sciencePts: 65,
+        dataGen: 6.5,
+        commsCap: 0,
+        cost: 28,
+        crewed: false,
+        isParachute: false,
+        desc: 'Orbital radar, spectrometer & imaging telescope. High science yield, heavy power & data load.'
+      },
+      {
+        id: 'apollo_telescope',
+        name: 'Apollo Orbital Telescope Mount',
+        category: 'payload',
+        tag: 'SCIENCE // +95 PTS (HIGH DATA)',
+        widthClass: 'w-40',
+        heightMeters: 4.4,
+        dryMass: 4.5,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 180,
+        powerDraw: 460,
+        batteryWh: 600,
+        sciencePts: 95,
+        dataGen: 11.5,
+        commsCap: 0,
+        cost: 42,
+        crewed: false,
+        isParachute: false,
+        desc: 'Deep-space UV/X-ray observatory with gyro-stabilized optics. Demands high-gain downlink.'
+      },
+      {
+        id: 'lunar_rover_bay',
+        name: 'Lunar Surface Rover & Core Lab',
+        category: 'payload',
+        tag: 'SCIENCE // +75 PTS (SURFACE)',
+        widthClass: 'w-36',
+        heightMeters: 2.8,
+        dryMass: 2.4,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 150,
+        batteryWh: 800,
+        sciencePts: 75,
+        dataGen: 4.5,
+        commsCap: 2.0,
+        cost: 32,
+        crewed: false,
+        isParachute: false,
+        desc: 'Foldable electric lunar roving vehicle with automated regolith drill & X-ray spectrometer.'
+      },
+      {
+        id: 'lunar_lander',
+        name: 'Lunar Excursion Module (LEM)',
+        category: 'payload',
+        tag: 'LANDER // +110 SCI',
+        widthClass: 'w-40',
+        heightMeters: 5.5,
+        dryMass: 4.8,
+        fuelMass: 8.2,
+        thrust: 45,
+        isp: 311,
+        powerGen: 120,
+        powerDraw: 210,
+        batteryWh: 2400,
+        sciencePts: 110,
+        dataGen: 4.0,
+        commsCap: 5.0,
+        cost: 48,
+        crewed: true,
+        isParachute: false,
+        desc: 'Two-stage descent/ascent lunar lander for surface EVA & core sample collection.'
+      },
+      {
+        id: 'high_gain_dish',
+        name: 'Deep-Space High-Gain Dish',
+        category: 'payload',
+        tag: 'COMMS // +18 Mbps',
+        widthClass: 'w-32',
+        heightMeters: 2.4,
+        dryMass: 1.5,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 140,
+        batteryWh: 0,
+        sciencePts: 10,
+        dataGen: 0,
+        commsCap: 18.0,
+        cost: 19,
+        crewed: false,
+        isParachute: false,
+        desc: 'S-Band/X-Band parabolic dish overcoming lunar and deep-space signal attenuation.'
+      },
+      {
+        id: 'laser_comms_terminal',
+        name: 'Optical Laser Relay Terminal',
+        category: 'payload',
+        tag: 'COMMS // +32 Mbps',
+        widthClass: 'w-32',
+        heightMeters: 2.1,
+        dryMass: 1.3,
+        fuelMass: 0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 230,
+        batteryWh: 0,
+        sciencePts: 15,
+        dataGen: 0,
+        commsCap: 32.0,
+        cost: 27,
+        crewed: false,
+        isParachute: false,
+        desc: 'Next-gen infrared laser transceiver delivering ultra-high bandwidth for heavy science suites.'
+      },
+
+      // --- FUEL TANKS (S-IVB SMALL, S-II MEDIUM, S-IC LARGE) ---
+      {
+        id: 'tank_s4b',
+        name: 'S-IVB Upper Stage Tank',
+        category: 'tank',
+        tag: 'SMALL TANK // LH2/LOX',
+        widthClass: 'w-36',
+        heightMeters: 11.5,
+        dryMass: 6.5,
+        fuelMass: 68.0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 20,
+        batteryWh: 400,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 22,
+        crewed: false,
+        isParachute: false,
+        desc: 'Third-stage orbital insertion & trans-lunar injection cryogenic propellant tank.'
+      },
+      {
+        id: 'tank_s2',
+        name: 'S-II Second Stage Tank',
+        category: 'tank',
+        tag: 'MEDIUM TANK // LH2/LOX',
+        widthClass: 'w-44',
+        heightMeters: 18.0,
+        dryMass: 18.0,
+        fuelMass: 210.0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 25,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 34,
+        crewed: false,
+        isParachute: false,
+        desc: 'Mid-stage high-volume liquid hydrogen tank for upper-atmosphere acceleration.'
+      },
+      {
+        id: 'tank_s1c',
+        name: 'S-IC First Stage Super Tank',
+        category: 'tank',
+        tag: 'LARGE TANK // RP-1/LOX',
+        widthClass: 'w-52',
+        heightMeters: 26.0,
+        dryMass: 42.0,
+        fuelMass: 620.0,
+        thrust: 0,
+        isp: 0,
+        powerGen: 0,
+        powerDraw: 30,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 52,
+        crewed: false,
+        isParachute: false,
+        desc: 'Massive Saturn V first-stage kerosene/LOX tank. Requires heavy F-1 booster thrust.'
+      },
+
+      // --- ENGINES (J-2 VACUUM, F-1 HEAVY BOOSTER) ---
+      {
+        id: 'engine_j2',
+        name: 'J-2 Vacuum Engine Cluster',
+        category: 'engine',
+        tag: 'HIGH ISP (421s) // 1,033 kN',
+        widthClass: 'w-36',
+        heightMeters: 3.4,
+        dryMass: 2.2,
+        fuelMass: 0,
+        thrust: 1033,
+        isp: 421,
+        powerGen: 0,
+        powerDraw: 15,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 18,
+        crewed: false,
+        isParachute: false,
+        desc: 'High-efficiency cryogenic vacuum engine. Ideal for upper stages, low sea-level thrust.'
+      },
+      {
+        id: 'engine_f1_single',
+        name: 'Single F-1 Booster Engine',
+        category: 'engine',
+        tag: 'HEAVY THRUST // 6,770 kN',
+        widthClass: 'w-44',
+        heightMeters: 5.6,
+        dryMass: 8.4,
+        fuelMass: 0,
+        thrust: 6770,
+        isp: 263,
+        powerGen: 0,
+        powerDraw: 20,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 26,
+        crewed: false,
+        isParachute: false,
+        desc: 'Most powerful single-chamber liquid-fueled rocket engine ever flown.'
+      },
+      {
+        id: 'engine_f1_cluster',
+        name: '5× F-1 Saturn V Engine Skirt',
+        category: 'engine',
+        tag: 'MEGA LIFT // 33,850 kN',
+        widthClass: 'w-52',
+        heightMeters: 6.2,
+        dryMass: 39.0,
+        fuelMass: 0,
+        thrust: 33850,
+        isp: 265,
+        powerGen: 0,
+        powerDraw: 40,
+        batteryWh: 0,
+        sciencePts: 0,
+        dataGen: 0,
+        commsCap: 0,
+        cost: 68,
+        crewed: false,
+        isParachute: false,
+        desc: 'Iconic 5-engine Saturn V thrust structure with stabilizing tail fins for heavy S-IC stacks.'
+      }
+    ];
+
+    // 2. TARGET ORBITS & ENGINEERING CONSTRAINTS
+    const ORBITS = {
+      leo: {
+        id: 'leo',
+        name: 'Low Earth Orbit (400 km)',
+        reqDeltaV: 9400,
+        eclipseMins: 35,
+        commsRangeFactor: 1.0,
+        altitudeKm: 400
+      },
+      gto: {
+        id: 'gto',
+        name: 'Geostationary Transfer (35,786 km)',
+        reqDeltaV: 11800,
+        eclipseMins: 65,
+        commsRangeFactor: 0.45,
+        altitudeKm: 35786
+      },
+      lunar_orbit: {
+        id: 'lunar_orbit',
+        name: 'Low Lunar Orbit (384,400 km)',
+        reqDeltaV: 13400,
+        eclipseMins: 50,
+        commsRangeFactor: 0.25,
+        altitudeKm: 384400
+      },
+      lunar_return: {
+        id: 'lunar_return',
+        name: 'Apollo Lunar Landing & Splashdown',
+        reqDeltaV: 16200,
+        eclipseMins: 55,
+        commsRangeFactor: 0.22,
+        altitudeKm: 384400
+      }
+    };
+
+    // 3. MISSION SCENARIOS
+    const MISSIONS = {
+      leo_obs: {
+        id: 'leo_obs',
+        title: '01. LEO Earth Observation',
+        defaultOrbit: 'leo',
+        budget: 185,
+        minScience: 60,
+        requireCrew: false,
+        requireLander: false,
+        brief: 'Deploy an Earth observation satellite into LEO (400 km). Must sustain power through a 35-min orbital eclipse and downlink at least 60 Science Pts within a $185M budget.',
+        preset: ['probe_core', 'solar_wings', 'battery_bank', 'science_lab', 'tank_s4b', 'engine_j2', 'tank_s2', 'engine_f1_single']
+      },
+      gto_comms: {
+        id: 'gto_comms',
+        title: '02. GTO Deep Relay Sat',
+        defaultOrbit: 'gto',
+        budget: 230,
+        minScience: 35,
+        requireCrew: false,
+        requireLander: false,
+        brief: 'Insert a high-bandwidth communications relay into GTO (35,786 km). Long 65-minute eclipses and 0.45× signal attenuation require robust batteries and high-gain comms.',
+        preset: ['probe_core', 'high_gain_dish', 'solar_wings', 'battery_bank', 'science_lab', 'tank_s4b', 'engine_j2', 'tank_s2', 'engine_f1_single']
+      },
+      lunar_recon: {
+        id: 'lunar_recon',
+        title: '03. Lunar Orbital Recon',
+        defaultOrbit: 'lunar_orbit',
+        budget: 295,
+        minScience: 75,
+        requireCrew: false,
+        requireLander: false,
+        brief: 'Reach Low Lunar Orbit (13,400 m/s Δv) to map landing sites. Distance reduces comms to 25% efficiency—high-gain dish & multi-stage propulsion are vital.',
+        preset: ['probe_core', 'high_gain_dish', 'solar_wings', 'battery_bank', 'science_lab', 'tank_s4b', 'engine_j2', 'tank_s2', 'engine_j2', 'tank_s1c', 'engine_f1_cluster']
+      },
+      apollo_landing: {
+        id: 'apollo_landing',
+        title: '04. Apollo Lunar Landing & Return',
+        defaultOrbit: 'lunar_return',
+        budget: 420,
+        minScience: 130,
+        requireCrew: true,
+        requireLander: true,
+        brief: 'Full Saturn V Apollo-class expedition! Carry a 3-person crew, Lunar Excursion Module, solar/battery power, high-gain comms, and parachutes for safe ocean splashdown.',
+        preset: ['parachute_pack', 'apollo_cm', 'high_gain_dish', 'solar_wings', 'battery_bank', 'lunar_lander', 'tank_s4b', 'engine_j2', 'tank_s2', 'engine_j2', 'tank_s1c', 'engine_f1_cluster']
+      },
+      sandbox: {
+        id: 'sandbox',
+        title: '05. Open Engineering Sandbox',
+        defaultOrbit: 'leo',
+        budget: 999,
+        minScience: 0,
+        requireCrew: false,
+        requireLander: false,
+        brief: 'Unconstrained aerospace testbed ($999M budget). Experiment freely with Saturn V multi-stage stacks, thrust-to-weight ratios, and orbital trajectories.',
+        preset: ['parachute_pack', 'apollo_cm', 'solar_wings', 'battery_bank', 'science_lab', 'tank_s4b', 'engine_j2', 'tank_s1c', 'engine_f1_cluster']
+      }
+    };
+
+    // 4. CONSTANTS & APPLICATION STATE
+    const MAX_PAD_HEIGHT_M = 110.6; // Authentic Saturn V stack height reference (meters)
+
+    let state = {
+      missionId: 'leo_obs',
+      orbitId: 'leo',
+      categoryFilter: 'all',
+      stack: [], // Array of component instances { uid, ...componentData }
+      metrics: null,
+      simAnimId: null,
+      flight: null // Live player-controlled flight physics state
+    };
+
+    // 5. DOM ELEMENT REFERENCES
+    const els = {
+      missionSelect: document.getElementById('missionSelect'),
+      orbitSelect: document.getElementById('orbitSelect'),
+      missionBriefText: document.getElementById('missionBriefText'),
+      missionReqBadges: document.getElementById('missionReqBadges'),
+      componentPalette: document.getElementById('componentPalette'),
+      assemblyDropZone: document.getElementById('assemblyDropZone'),
+      emptyBayPrompt: document.getElementById('emptyBayPrompt'),
+      rocketStackContainer: document.getElementById('rocketStackContainer'),
+      hudStageCount: document.getElementById('hudStageCount'),
+      hudPartCount: document.getElementById('hudPartCount'),
+      hudHeight: document.getElementById('hudHeight'),
+      hudHeightPct: document.getElementById('hudHeightPct'),
+      hudHeightBar: document.getElementById('hudHeightBar'),
+      goNoGoSummary: document.getElementById('goNoGoSummary'),
+      overallStatusPill: document.getElementById('overallStatusPill'),
+      statDeltaVBadge: document.getElementById('statDeltaVBadge'),
+      barDeltaV: document.getElementById('barDeltaV'),
+      statTWR: document.getElementById('statTWR'),
+      statWetMass: document.getElementById('statWetMass'),
+      statDryMass: document.getElementById('statDryMass'),
+      statThrust: document.getElementById('statThrust'),
+      statIsp: document.getElementById('statIsp'),
+      statPowerBadge: document.getElementById('statPowerBadge'),
+      statPowerGenLoad: document.getElementById('statPowerGenLoad'),
+      statBatteryTime: document.getElementById('statBatteryTime'),
+      barPower: document.getElementById('barPower'),
+      statScienceBadge: document.getElementById('statScienceBadge'),
+      statCommsRatio: document.getElementById('statCommsRatio'),
+      statCommsNote: document.getElementById('statCommsNote'),
+      statRecovery: document.getElementById('statRecovery'),
+      statParachuteNote: document.getElementById('statParachuteNote'),
+      statBudgetBadge: document.getElementById('statBudgetBadge'),
+      barBudget: document.getElementById('barBudget'),
+      engineeringWarningsList: document.getElementById('engineeringWarningsList'),
+      simulationModal: document.getElementById('simulationModal'),
+      flightCanvas: document.getElementById('flightCanvas'),
+      simAltVelLabel: document.getElementById('simAltVelLabel'),
+      simEventLog: document.getElementById('simEventLog'),
+      simRunningPlaceholder: document.getElementById('simRunningPlaceholder'),
+      postMissionReport: document.getElementById('postMissionReport'),
+      guideModal: document.getElementById('guideModal'),
+      toastBanner: document.getElementById('toastBanner')
+    };
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      els.toastBanner.textContent = msg;
+      els.toastBanner.classList.remove('hidden');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        els.toastBanner.classList.add('hidden');
+      }, 2800);
+    }
+
+    /**
+     * ============================================================================
+     * SVG TECHNICAL SCHEMATICS FOR SATURN V & SPACECRAFT MODULES
+     * ============================================================================
+     */
+    function getModuleSVG(comp, isCompact = false) {
+      const h = isCompact ? 34 : Math.max(36, Math.min(92, Math.round(comp.heightMeters * 3.4)));
+      switch (comp.id) {
+        case 'apollo_cm':
+          return `<svg viewBox="0 0 120 48" class="w-28 h-11 mx-auto">
+            <polygon points="48,4 72,4 94,42 26,42" fill="#e2e8f0" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="54" y="0" width="12" height="5" fill="#94a3b8"/>
+            <circle cx="60" cy="24" r="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+            <line x1="34" y1="34" x2="86" y2="34" stroke="#0f172a" stroke-width="2"/>
+          </svg>`;
+        case 'probe_core':
+        case 'deep_space_bus':
+          return `<svg viewBox="0 0 120 40" class="w-28 h-9 mx-auto">
+            <polygon points="36,8 84,8 92,36 28,36" fill="#cbd5e1" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="46" y="14" width="28" height="14" rx="2" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+            <circle cx="60" cy="21" r="3" fill="#38bdf8"/>
+          </svg>`;
+        case 'parachute_pack':
+          return `<svg viewBox="0 0 120 32" class="w-28 h-7 mx-auto">
+            <rect x="34" y="6" width="52" height="22" rx="4" fill="#f97316" fill-opacity="0.25" stroke="#fb923c" stroke-width="2"/>
+            <path d="M42,24 Q60,8 78,24" fill="none" stroke="#fdba74" stroke-width="2"/>
+            <line x1="60" y1="14" x2="60" y2="26" stroke="#fdba74" stroke-width="1.5"/>
+          </svg>`;
+        case 'solar_wings':
+          return `<svg viewBox="0 0 160 34" class="w-36 h-8 mx-auto">
+            <rect x="6" y="9" width="54" height="16" rx="2" fill="#1d4ed8" stroke="#60a5fa" stroke-width="1.5"/>
+            <line x1="24" y1="9" x2="24" y2="25" stroke="#93c5fd" stroke-width="1"/>
+            <line x1="42" y1="9" x2="42" y2="25" stroke="#93c5fd" stroke-width="1"/>
+            <rect x="60" y="6" width="40" height="22" rx="3" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+            <rect x="100" y="9" width="54" height="16" rx="2" fill="#1d4ed8" stroke="#60a5fa" stroke-width="1.5"/>
+            <line x1="118" y1="9" x2="118" y2="25" stroke="#93c5fd" stroke-width="1"/>
+            <line x1="136" y1="9" x2="136" y2="25" stroke="#93c5fd" stroke-width="1"/>
+          </svg>`;
+        case 'lunar_lander':
+          return `<svg viewBox="0 0 140 54" class="w-36 h-12 mx-auto">
+            <polygon points="44,6 96,6 104,26 36,26" fill="#cbd5e1" stroke="#38bdf8" stroke-width="1.5"/>
+            <rect x="38" y="26" width="64" height="16" rx="2" fill="#d97706" stroke="#fbbf24" stroke-width="1.5"/>
+            <line x1="38" y1="36" x2="18" y2="50" stroke="#94a3b8" stroke-width="2.5"/>
+            <line x1="102" y1="36" x2="122" y2="50" stroke="#94a3b8" stroke-width="2.5"/>
+            <line x1="12" y1="50" x2="24" y2="50" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="116" y1="50" x2="128" y2="50" stroke="#fbbf24" stroke-width="2.5"/>
+          </svg>`;
+        case 'tank_s4b':
+        case 'tank_s2':
+        case 'tank_s1c': {
+          const wPx = comp.id === 'tank_s1c' ? 136 : comp.id === 'tank_s2' ? 116 : 96;
+          const x0 = (160 - wPx) / 2;
+          return `<svg viewBox="0 0 160 ${h}" style="height:${h}px" class="w-40 mx-auto">
+            <rect x="${x0}" y="2" width="${wPx}" height="${h - 4}" rx="3" fill="#f8fafc" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="${x0}" y="2" width="${Math.round(wPx * 0.24)}" height="${Math.min(18, h - 6)}" fill="#0f172a"/>
+            <rect x="${x0 + wPx - Math.round(wPx * 0.24)}" y="2" width="${Math.round(wPx * 0.24)}" height="${Math.min(18, h - 6)}" fill="#0f172a"/>
+            <text x="80" y="${Math.round(h / 2) + 4}" text-anchor="middle" fill="#0f172a" font-size="10" font-family="JetBrains Mono, monospace" font-weight="bold">USA</text>
+          </svg>`;
+        }
+        case 'engine_j2':
+        case 'engine_f1_single':
+        case 'engine_f1_cluster': {
+          const count = comp.id === 'engine_f1_cluster' ? 5 : comp.id === 'engine_j2' ? 2 : 1;
+          let bells = '';
+          for (let i = 0; i < count; i++) {
+            const cx = 80 + (i - (count - 1) / 2) * (count === 5 ? 20 : 28);
+            bells += `<polygon points="${cx - 7},10 ${cx + 7},10 ${cx + 12},34 ${cx - 12},34" fill="#334155" stroke="#38bdf8" stroke-width="1.5"/>`;
+          }
+          return `<svg viewBox="0 0 160 38" class="w-40 h-9 mx-auto">
+            <rect x="34" y="2" width="92" height="10" rx="2" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+            ${bells}
+          </svg>`;
+        }
+        default:
+          return `<svg viewBox="0 0 140 36" class="w-32 h-8 mx-auto">
+            <rect x="26" y="4" width="88" height="28" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.8"/>
+            <circle cx="44" cy="18" r="4" fill="#38bdf8"/>
+            <line x1="56" y1="14" x2="102" y2="14" stroke="#94a3b8" stroke-width="2"/>
+            <line x1="56" y1="22" x2="92" y2="22" stroke="#38bdf8" stroke-width="1.5"/>
+          </svg>`;
+      }
+    }
+
+    /**
+     * ============================================================================
+     * PALETTE RENDERING & STACK MUTATION ACTIONS
+     * ============================================================================
+     */
+    function renderPalette() {
+      const filtered = state.categoryFilter === 'all'
+        ? COMPONENTS
+        : COMPONENTS.filter(c => c.category === state.categoryFilter);
+
+      els.componentPalette.innerHTML = filtered.map(comp => `
+        <div draggable="true" data-comp-id="${comp.id}"
+          class="module-card bg-[#0e2342] border border-sky-500/30 rounded-xl p-2.5 cursor-grab active:cursor-grabbing flex flex-col gap-1.5">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[9px] font-mono-tech uppercase px-1.5 py-0.5 rounded bg-sky-950 text-cyan-300 border border-sky-500/30">
+                ${comp.tag}
+              </span>
+              <h3 class="text-xs font-bold text-sky-100 mt-1">${comp.name}</h3>
+            </div>
+            <button data-add-id="${comp.id}"
+              class="shrink-0 px-2 py-1 rounded-md bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 border border-cyan-400/40 font-mono-tech text-[11px] font-bold transition">
+              + Add
+            </button>
+          </div>
+          <p class="text-[11px] text-sky-300/75 leading-snug">${comp.desc}</p>
+          <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-sky-500/15 font-mono-tech text-[10px] text-sky-300/90">
+            <span>⚖️ ${(comp.dryMass + comp.fuelMass).toFixed(1)}t</span>
+            <span>📏 ${comp.heightMeters}m</span>
+            <span>💰 $${comp.cost}M</span>
+            ${comp.thrust > 0 ? `<span class="text-amber-300">🔥 ${comp.thrust.toLocaleString()}kN</span>` : ''}
+            ${comp.sciencePts > 0 ? `<span class="text-indigo-300">🔬 +${comp.sciencePts} Sci</span>` : ''}
+            ${comp.powerGen > 0 ? `<span class="text-emerald-300">⚡ +${comp.powerGen}W</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      // Attach Drag & Click handlers
+      els.componentPalette.querySelectorAll('[draggable="true"]').forEach(card => {
+        card.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', card.dataset.compId);
+        });
+      });
+
+      els.componentPalette.querySelectorAll('[data-add-id]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          addComponentToStack(btn.dataset.addId);
+        });
+      });
+    }
+
+    function addComponentToStack(compId) {
+      const template = COMPONENTS.find(c => c.id === compId);
+      if (!template) return;
+
+      const instance = {
+        ...template,
+        uid: 'mod_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
+      };
+
+      // Smart stacking order: Cockpits/Payloads go near top, Tanks in middle, Engines at bottom
+      if (instance.category === 'cockpit') {
+        state.stack.unshift(instance);
+      } else if (instance.category === 'payload') {
+        const firstTankIdx = state.stack.findIndex(m => m.category === 'tank' || m.category === 'engine');
+        if (firstTankIdx === -1) state.stack.push(instance);
+        else state.stack.splice(firstTankIdx, 0, instance);
+      } else {
+        state.stack.push(instance);
+      }
+
+      SoundFX.playAttach(instance.category);
+      updateAll();
+    }
+
+    function removeComponentFromStack(uid) {
+      state.stack = state.stack.filter(m => m.uid !== uid);
+      SoundFX.playRemove();
+      updateAll();
+    }
+
+    function moveStackItem(index, direction) {
+      const targetIdx = index + direction;
+      if (targetIdx < 0 || targetIdx >= state.stack.length) return;
+      const temp = state.stack[index];
+      state.stack[index] = state.stack[targetIdx];
+      state.stack[targetIdx] = temp;
+      SoundFX.playClick();
+      updateAll();
+    }
+
+    function loadMissionPreset(missionId) {
+      const mission = MISSIONS[missionId];
+      if (!mission) return;
+      state.missionId = missionId;
+      state.orbitId = mission.defaultOrbit;
+      els.missionSelect.value = missionId;
+      els.orbitSelect.value = mission.defaultOrbit;
+
+      state.stack = mission.preset
+        .map(id => COMPONENTS.find(c => c.id === id))
+        .filter(Boolean)
+        .map((c, idx) => ({
+          ...c,
+          uid: `preset_${idx}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`
+        }));
+
+      updateAll();
+    }
+
+    /**
+     * ============================================================================
+     * INTEGRATED SPACECRAFT SYSTEMS & TSIOLKOVSKY DELTA-V PHYSICS CALCULATOR
+     * ============================================================================
+     */
+    function calculateMissionMetrics() {
+      const mission = MISSIONS[state.missionId];
+      const orbit = ORBITS[state.orbitId];
+      const stack = state.stack;
+
+      let totalHeight = 0;
+      let totalDryMass = 0;
+      let totalFuelMass = 0;
+      let totalCost = 0;
+      let totalPowerGen = 0;
+      let totalPowerDraw = 0;
+      let totalBatteryWh = 0;
+      let rawSciencePts = 0;
+      let totalDataGen = 0;
+      let baseCommsCap = 0;
+      let hasCockpit = false;
+      let isCrewed = false;
+      let hasParachute = false;
+      let hasLander = false;
+
+      stack.forEach(p => {
+        totalHeight += p.heightMeters;
+        totalDryMass += p.dryMass;
+        totalFuelMass += p.fuelMass;
+        totalCost += p.cost;
+        totalPowerGen += p.powerGen;
+        totalPowerDraw += p.powerDraw;
+        totalBatteryWh += p.batteryWh;
+        rawSciencePts += p.sciencePts;
+        totalDataGen += p.dataGen;
+        baseCommsCap += p.commsCap;
+        if (p.category === 'cockpit') hasCockpit = true;
+        if (p.crewed) isCrewed = true;
+        if (p.isParachute) hasParachute = true;
+        if (p.id === 'lunar_lander') hasLander = true;
+      });
+
+      const totalWetMass = totalDryMass + totalFuelMass;
+
+      // Multi-stage Tsiolkovsky Delta-V calculation
+      const g0 = 9.80665;
+      const stages = buildFlightStages();
+      let totalDeltaV = 0;
+      let liftoffThrust = 0;
+      let weightedIspNumerator = 0;
+      let weightedIspDenominator = 0;
+
+      if (stages.length > 0) {
+        liftoffThrust = stages[0].thrust;
+      }
+
+      let currentMass = totalWetMass;
+      stages.forEach(stg => {
+        if (stg.thrust > 0 && stg.isp > 0) {
+          weightedIspNumerator += stg.thrust * stg.isp;
+          weightedIspDenominator += stg.thrust;
+        }
+        if (stg.fuelMass > 0 && stg.thrust > 0 && currentMass > stg.fuelMass) {
+          const finalStageMass = currentMass - stg.fuelMass;
+          totalDeltaV += stg.isp * g0 * Math.log(currentMass / finalStageMass);
+        }
+        currentMass -= (stg.fuelMass + stg.dryMass);
+      });
+
+      const avgIsp = weightedIspDenominator > 0 ? weightedIspNumerator / weightedIspDenominator : 0;
+      const liftoffTWR = totalWetMass > 0 ? liftoffThrust / (totalWetMass * g0) : 0;
+
+      // Power & Eclipse Survival
+      const netPower = totalPowerGen - totalPowerDraw;
+      const eclipseSurvivalMins = totalPowerDraw > 0
+        ? Math.round((totalBatteryWh / totalPowerDraw) * 60)
+        : 999;
+
+      // Communications attenuation & science downlink efficiency
+      const effectiveCommsMbps = +(baseCommsCap * orbit.commsRangeFactor).toFixed(1);
+      const downlinkEfficiency = totalDataGen > 0
+        ? Math.min(1.0, effectiveCommsMbps / totalDataGen)
+        : 1.0;
+      const effectiveScience = Math.round(rawSciencePts * (0.4 + 0.6 * downlinkEfficiency));
+
+      // Generate live engineering warnings & trade-off advice
+      const warnings = [];
+      if (stack.length === 0) {
+        warnings.push('• Assembly Bay is empty. Add modules or press Auto-Stack.');
+      } else {
+        if (!hasCockpit) warnings.push('• Missing Command Capsule or Avionics Core.');
+        if (liftoffThrust <= 0) warnings.push('• No rocket engines installed at the base of the stack.');
+        else if (liftoffTWR < 1.2) warnings.push(`• Low Liftoff TWR (${liftoffTWR.toFixed(2)}g < 1.20g): Rocket is too heavy to clear Pad 39A.`);
+        if (totalDeltaV < orbit.reqDeltaV) {
+          warnings.push(`• Δv Deficit: ${Math.round(totalDeltaV).toLocaleString()} / ${orbit.reqDeltaV.toLocaleString()} m/s needed for ${orbit.name}.`);
+        }
+        if (totalHeight > MAX_PAD_HEIGHT_M) {
+          warnings.push(`• Pad Height Exceeded: ${totalHeight.toFixed(1)}m exceeds 110.6m LUT-39A limit.`);
+        }
+        if (netPower < 0) {
+          warnings.push(`• Power Deficit (${netPower}W): Add Solar Wings or SNAP-27 RTG.`);
+        }
+        if (eclipseSurvivalMins < orbit.eclipseMins) {
+          warnings.push(`• Eclipse Battery Shortfall: ${eclipseSurvivalMins}m stored vs ${orbit.eclipseMins}m shadow.`);
+        }
+        if (downlinkEfficiency < 0.85 && rawSciencePts > 0) {
+          warnings.push(`• Comms Bottleneck: Only ${Math.round(downlinkEfficiency * 100)}% of science data can downlink at ${orbit.id.toUpperCase()} range.`);
+        }
+        if ((isCrewed || mission.requireCrew) && !hasParachute) {
+          warnings.push('• Crew Safety Alert: Install Triple Parachutes for atmospheric splashdown.');
+        }
+        if (mission.requireLander && !hasLander) {
+          warnings.push('• Mission Requirement: Lunar Excursion Module (LEM) required for landing.');
+        }
+        if (totalCost > mission.budget) {
+          warnings.push(`• Over Budget: $${totalCost}M exceeds $${mission.budget}M program cap.`);
+        }
+      }
+
+      if (warnings.length === 0) {
+        warnings.push('✓ All spacecraft subsystems, propulsion margins, power & comms are GO for launch!');
+      }
+
+      const isGoForLaunch = stack.length > 0 && hasCockpit && liftoffThrust > 0 && liftoffTWR >= 1.15 && totalHeight <= MAX_PAD_HEIGHT_M;
+
+      return {
+        totalHeight,
+        totalDryMass,
+        totalFuelMass,
+        totalWetMass,
+        totalCost,
+        totalPowerGen,
+        totalPowerDraw,
+        netPower,
+        totalBatteryWh,
+        eclipseSurvivalMins,
+        rawSciencePts,
+        effectiveScience,
+        totalDataGen,
+        effectiveCommsMbps,
+        downlinkEfficiency,
+        hasCockpit,
+        isCrewed,
+        hasParachute,
+        hasLander,
+        stageCount: stages.length,
+        totalDeltaV,
+        liftoffThrust,
+        liftoffTWR,
+        avgIsp,
+        warnings,
+        isGoForLaunch
+      };
+    }
+
+    /**
+     * ============================================================================
+     * UI RENDERING: ROCKET STACK & REAL-TIME TELEMETRY DASHBOARD
+     * ============================================================================
+     */
+    function renderRocketStack() {
+      const m = state.metrics;
+      const pctHeight = Math.min(100, (m.totalHeight / MAX_PAD_HEIGHT_M) * 100);
+
+      els.hudStageCount.textContent = m.stageCount;
+      els.hudPartCount.textContent = state.stack.length;
+      els.hudHeight.textContent = `${m.totalHeight.toFixed(1)} / ${MAX_PAD_HEIGHT_M} m`;
+      els.hudHeightPct.textContent = `${pctHeight.toFixed(1)}%`;
+      els.hudHeightBar.style.width = `${pctHeight}%`;
+      els.hudHeightBar.className = m.totalHeight > MAX_PAD_HEIGHT_M
+        ? 'h-full bg-rose-500 transition-all duration-200'
+        : 'h-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-200';
+
+      if (state.stack.length === 0) {
+        els.emptyBayPrompt.classList.remove('hidden');
+        els.rocketStackContainer.innerHTML = '';
+        return;
+      }
+
+      els.emptyBayPrompt.classList.add('hidden');
+      els.rocketStackContainer.innerHTML = state.stack.map((part, idx) => `
+        <div class="rocket-slot relative group w-full flex flex-col items-center">
+          <div class="relative flex items-center justify-center">
+            ${getModuleSVG(part, false)}
+            <!-- Hover / Tap Reorder & Remove Controls -->
+            <div class="slot-controls opacity-90 sm:opacity-0 transition-opacity absolute -right-24 flex items-center gap-1 bg-[#071426]/95 border border-sky-400/40 rounded-lg px-1.5 py-1 shadow-lg z-20">
+              <button data-move-up="${idx}" class="p-1 text-[10px] font-mono-tech text-sky-300 hover:text-white" title="Move Up">▲</button>
+              <button data-move-down="${idx}" class="p-1 text-[10px] font-mono-tech text-sky-300 hover:text-white" title="Move Down">▼</button>
+              <button data-remove-uid="${part.uid}" class="p-1 text-[10px] font-mono-tech text-rose-400 hover:text-rose-200 font-bold" title="Remove Module">✕</button>
+            </div>
+            <!-- Left Blueprint Callout Label -->
+            <div class="hidden md:flex items-center gap-1.5 absolute -left-36 text-right justify-end w-32 pointer-events-none">
+              <span class="text-[10px] font-mono-tech text-sky-200/85 truncate">${part.name}</span>
+              <span class="w-3 h-[1px] bg-sky-400/50"></span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      els.rocketStackContainer.querySelectorAll('[data-remove-uid]').forEach(btn => {
+        btn.addEventListener('click', () => removeComponentFromStack(btn.dataset.removeUid));
+      });
+      els.rocketStackContainer.querySelectorAll('[data-move-up]').forEach(btn => {
+        btn.addEventListener('click', () => moveStackItem(Number(btn.dataset.moveUp), -1));
+      });
+      els.rocketStackContainer.querySelectorAll('[data-move-down]').forEach(btn => {
+        btn.addEventListener('click', () => moveStackItem(Number(btn.dataset.moveDown), 1));
+      });
+    }
+
+    function renderTelemetryUI() {
+      const m = state.metrics;
+      const mission = MISSIONS[state.missionId];
+      const orbit = ORBITS[state.orbitId];
+
+      // Briefing & Requirements
+      els.missionBriefText.textContent = mission.brief;
+      els.missionReqBadges.innerHTML = `
+        <span class="px-2 py-0.5 rounded bg-sky-950 border border-sky-500/30 text-sky-200">BUDGET ≤ $${mission.budget}M</span>
+        <span class="px-2 py-0.5 rounded bg-indigo-950 border border-indigo-400/30 text-indigo-200">SCIENCE ≥ ${mission.minScience} PTS</span>
+        ${mission.requireCrew ? '<span class="px-2 py-0.5 rounded bg-amber-950 border border-amber-400/30 text-amber-200">CREWED + CHUTES</span>' : ''}
+        ${mission.requireLander ? '<span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-400/30 text-emerald-200">LEM LANDER</span>' : ''}
+      `;
+
+      // 1. Propulsion & Delta-V
+      const dvPct = Math.min(100, (m.totalDeltaV / orbit.reqDeltaV) * 100);
+      els.statDeltaVBadge.textContent = `${Math.round(m.totalDeltaV).toLocaleString()} / ${orbit.reqDeltaV.toLocaleString()} m/s`;
+      els.barDeltaV.style.width = `${dvPct}%`;
+      els.statTWR.textContent = `${m.liftoffTWR.toFixed(2)} g`;
+      els.statTWR.className = m.liftoffTWR >= 1.2 ? 'font-bold text-sm text-emerald-400' : 'font-bold text-sm text-rose-400';
+      els.statWetMass.textContent = `${m.totalWetMass.toFixed(1)} t`;
+      els.statDryMass.textContent = `Dry: ${m.totalDryMass.toFixed(1)} t`;
+      els.statThrust.textContent = `${m.liftoffThrust.toLocaleString()} kN`;
+      els.statIsp.textContent = `Avg Isp: ${Math.round(m.avgIsp)}s`;
+
+      // 2. Power & Eclipse
+      els.statPowerBadge.textContent = `${m.netPower >= 0 ? '+' : ''}${m.netPower} W Net`;
+      els.statPowerGenLoad.textContent = `${m.totalPowerGen}W / ${m.totalPowerDraw}W`;
+      els.statBatteryTime.textContent = m.eclipseSurvivalMins >= 999 ? '∞ min' : `${m.eclipseSurvivalMins} min (Req ${orbit.eclipseMins}m)`;
+      const pwrPct = m.totalPowerDraw > 0 ? Math.min(100, (m.totalPowerGen / m.totalPowerDraw) * 100) : 100;
+      els.barPower.style.width = `${pwrPct}%`;
+
+      // 3. Science & Comms
+      els.statScienceBadge.textContent = `${m.effectiveScience} SCI PTS`;
+      els.statCommsRatio.textContent = `${m.totalDataGen.toFixed(1)} / ${m.effectiveCommsMbps} Mbps`;
+      els.statCommsNote.textContent = `Range factor: ${orbit.commsRangeFactor}x (${Math.round(m.downlinkEfficiency * 100)}% link)`;
+      els.statRecovery.textContent = m.isCrewed ? 'Crewed (Apollo)' : 'Uncrewed Robotic';
+      els.statParachuteNote.textContent = m.hasParachute ? 'Chutes: Armed ✓' : 'Chutes: None';
+
+      // 4. Budget
+      const budgetPct = Math.min(100, (m.totalCost / mission.budget) * 100);
+      els.statBudgetBadge.textContent = `$${m.totalCost}M / $${mission.budget}M`;
+      els.statBudgetBadge.className = m.totalCost <= mission.budget
+        ? 'text-[11px] font-mono-tech font-bold text-emerald-300'
+        : 'text-[11px] font-mono-tech font-bold text-rose-400';
+      els.barBudget.style.width = `${budgetPct}%`;
+      els.barBudget.className = m.totalCost <= mission.budget
+        ? 'h-full bg-emerald-400 transition-all duration-300'
+        : 'h-full bg-rose-500 transition-all duration-300';
+
+      // 5. Warnings & Go/No-Go Status
+      els.engineeringWarningsList.innerHTML = m.warnings.map(w => `
+        <li class="${w.startsWith('✓') ? 'text-emerald-300' : 'text-amber-200/90'}">${w}</li>
+      `).join('');
+
+      if (m.isGoForLaunch) {
+        els.overallStatusPill.textContent = 'GO FOR LAUNCH';
+        els.overallStatusPill.className = 'px-2 py-0.5 rounded font-mono-tech text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        els.goNoGoSummary.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span><span class="text-emerald-300">GO: Pad 39A cleared for manual ignition</span>`;
+      } else {
+        els.overallStatusPill.textContent = 'NO-GO';
+        els.overallStatusPill.className = 'px-2 py-0.5 rounded font-mono-tech text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        els.goNoGoSummary.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span><span class="text-rose-300">NO-GO: Check TWR, height, capsule & engines</span>`;
+      }
+    }
+
+    function updateAll() {
+      state.metrics = calculateMissionMetrics();
+      renderRocketStack();
+      renderTelemetryUI();
+    }
+
+    /**
+     * ============================================================================
+     * MANUAL MULTI-STAGE FLIGHT PHYSICS, ORBITAL MECHANICS & CANVAS RENDERER
+     * ============================================================================
+     */
+    function buildFlightStages() {
+      const stages = [];
+      let upperDryMass = 0;
+      let currentFuel = 0;
+      let currentTankDry = 0;
+      let currentThrust = 0;
+      let weightedIspSum = 0;
+
+      // Traverse top-to-bottom: engines terminate a stage
+      state.stack.forEach(part => {
+        if (part.category === 'cockpit' || part.category === 'payload') {
+          upperDryMass += part.dryMass;
+          currentFuel += part.fuelMass;
+        } else if (part.category === 'tank') {
+          currentTankDry += part.dryMass;
+          currentFuel += part.fuelMass;
+        } else if (part.category === 'engine') {
+          currentTankDry += part.dryMass;
+          currentThrust += part.thrust;
+          weightedIspSum += part.thrust * part.isp;
+
+          stages.push({
+            dryMass: currentTankDry,
+            fuelMass: currentFuel,
+            maxFuel: currentFuel,
+            thrust: currentThrust,
+            isp: currentThrust > 0 ? weightedIspSum / currentThrust : 300
+          });
+
+          currentFuel = 0;
+          currentTankDry = 0;
+          currentThrust = 0;
+          weightedIspSum = 0;
+        }
+      });
+
+      // Handle leftover tanks above top stage or payload-only stack
+      if (currentTankDry > 0 || currentFuel > 0) {
+        if (stages.length > 0) {
+          stages[0].dryMass += currentTankDry;
+          stages[0].fuelMass += currentFuel;
+          stages[0].maxFuel += currentFuel;
+        } else {
+          stages.push({
+            dryMass: currentTankDry,
+            fuelMass: currentFuel,
+            maxFuel: currentFuel,
+            thrust: 0,
+            isp: 0
+          });
+        }
+      }
+
+      if (stages.length > 0) {
+        stages[0].dryMass += upperDryMass;
+      } else {
+        stages.push({
+          dryMass: upperDryMass,
+          fuelMass: 0,
+          maxFuel: 0,
+          thrust: 0,
+          isp: 0
+        });
+      }
+
+      // Reverse so index 0 is Stage 1 (bottom booster) and last index is upper stage
+      return stages.reverse();
+    }
+
+    function setFlightThrottle(val) {
+      if (!state.flight) return;
+      state.flight.throttle = Math.max(0, Math.min(1, val));
+      const pct = Math.round(state.flight.throttle * 100);
+      document.getElementById('throttleSlider').value = pct;
+      document.getElementById('hudThrottleVal').textContent = `${pct}%`;
+    }
+
+    function setFlightPitch(deg) {
+      if (!state.flight) return;
+      state.flight.pitchDeg = Math.max(-20, Math.min(110, Math.round(deg)));
+      document.getElementById('pitchSlider').value = state.flight.pitchDeg;
+      const dir = state.flight.pitchDeg >= 85 ? '(UP)' : state.flight.pitchDeg <= 10 ? '(HORIZ)' : '(TURN)';
+      document.getElementById('hudPitchVal').textContent = `${state.flight.pitchDeg}° ${dir}`;
+    }
+
+    function setFlightWarp(warp) {
+      if (!state.flight) return;
+      state.flight.timeWarp = warp;
+      document.getElementById('hudWarpVal').textContent = `${warp}× ${warp === 1 ? 'REALTIME' : 'WARP'}`;
+      document.querySelectorAll('.warp-btn').forEach(btn => {
+        const w = Number(btn.dataset.warp);
+        btn.className = w === warp
+          ? 'warp-btn py-1 rounded bg-emerald-500 text-slate-950 font-bold text-[10px]'
+          : 'warp-btn py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-200 text-[10px]';
+      });
+    }
+
+    function triggerManualStageSeparation() {
+      const f = state.flight;
+      if (!f || f.ended) return;
+      if (f.stageIdx < f.stages.length - 1) {
+        f.stageIdx += 1;
+        f.sepFlash = 1.0;
+        SoundFX.playStageSep();
+        const stgNum = f.stageIdx + 1;
+        els.simEventLog.textContent = `STAGE ${f.stageIdx} JETTISONED — Stage ${stgNum}/${f.stages.length} ignition!`;
+      } else {
+        els.simEventLog.textContent = 'FINAL STAGE ACTIVE — No lower stages remaining to separate.';
+      }
+    }
+
+    function runMissionSimulation() {
+      const m = state.metrics;
+      if (!m || !m.isGoForLaunch) {
+        SoundFX.playWarning();
+        showToast('NO-GO: Ensure you have a capsule/core, engines, TWR ≥ 1.15g, and height ≤ 110.6m.');
+        return;
+      }
+
+      if (state.simAnimId) cancelAnimationFrame(state.simAnimId);
+      SoundFX.stopEngineRumble();
+
+      const orbit = ORBITS[state.orbitId];
+      const stages = buildFlightStages();
+
+      state.flight = {
+        stages,
+        stageIdx: 0,
+        altM: 0,
+        downrangeM: 0,
+        vx: 0,
+        vy: 0,
+        pitchDeg: 90,
+        throttle: 1.0,
+        timeWarp: 1,
+        metSec: 0,
+        maxAltKm: 0,
+        maxSpeed: 0,
+        orbitAchieved: false,
+        ended: false,
+        sepFlash: 0,
+        lastTs: performance.now()
+      };
+
+      // Reset UI panels
+      els.simulationModal.classList.remove('hidden');
+      els.simRunningPlaceholder.classList.remove('hidden');
+      els.postMissionReport.classList.add('hidden');
+
+      document.getElementById('guideTargetOrbitName').textContent = orbit.name;
+      document.getElementById('guideTargetAlt').textContent = '≥ 160 km (Orbital)';
+      const targetOrbitalSpeed = orbit.id === 'leo' ? 7800 : orbit.id === 'gto' ? 9200 : 10400;
+      document.getElementById('guideTargetVel').textContent = `≥ ${targetOrbitalSpeed.toLocaleString()} m/s`;
+
+      setFlightThrottle(1.0);
+      setFlightPitch(90);
+      setFlightWarp(1);
+      els.simEventLog.textContent = 'T+00:00 MAIN ENGINE START! Climb vertically, then gradually pitch down toward 0° for orbit.';
+
+      SoundFX.startEngineRumble();
+      state.simAnimId = requestAnimationFrame(stepFlightSimulation);
+    }
+
+    function stepFlightSimulation(now) {
+      const f = state.flight;
+      if (!f || f.ended) return;
+
+      const rawDt = Math.min(0.05, (now - f.lastTs) / 1000);
+      f.lastTs = now;
+
+      const orbit = ORBITS[state.orbitId];
+      const g0 = 9.80665;
+      const R_earth = 6371000;
+      const targetOrbitalSpeed = orbit.id === 'leo' ? 7800 : orbit.id === 'gto' ? 9200 : 10400;
+
+      // Sub-step integration for stability under time warp
+      const totalDt = rawDt * f.timeWarp;
+      const steps = Math.max(1, Math.min(20, Math.ceil(totalDt / 0.05)));
+      const dt = totalDt / steps;
+
+      for (let s = 0; s < steps; s++) {
+        f.metSec += dt;
+        const activeStg = f.stages[f.stageIdx];
+
+        // Calculate current vehicle mass (active stage + upper stages)
+        let currentMassTons = 0;
+        for (let i = f.stageIdx; i < f.stages.length; i++) {
+          currentMassTons += f.stages[i].dryMass + f.stages[i].fuelMass;
+        }
+        const massKg = Math.max(500, currentMassTons * 1000);
+
+        // Thrust & propellant burn
+        let thrustN = 0;
+        if (activeStg && activeStg.fuelMass > 0 && f.throttle > 0 && activeStg.thrust > 0) {
+          thrustN = activeStg.thrust * 1000 * f.throttle;
+          const massFlowKgPerSec = thrustN / (activeStg.isp * g0);
+          const burnedTons = (massFlowKgPerSec * dt) / 1000;
+          activeStg.fuelMass = Math.max(0, activeStg.fuelMass - burnedTons);
+
+          if (activeStg.fuelMass === 0) {
+            els.simEventLog.textContent = `STAGE ${f.stageIdx + 1} MECO (FUEL DEPLETED) — Press SPACE to separate stage!`;
+          }
+        }
+
+        // Pitch orientation (90° = straight up, 0° = horizontal east)
+        const pitchRad = (f.pitchDeg * Math.PI) / 180;
+        const axThrust = (thrustN * Math.cos(pitchRad)) / massKg;
+        const ayThrust = (thrustN * Math.sin(pitchRad)) / massKg;
+
+        // Atmospheric drag below 100 km
+        const speed = Math.hypot(f.vx, f.vy);
+        const atmDensity = f.altM < 100000 ? Math.exp(-f.altM / 8500) : 0;
+        const dragAccel = 0.000035 * atmDensity * speed * speed;
+        const axDrag = speed > 0 ? -(dragAccel * (f.vx / speed)) : 0;
+        const ayDrag = speed > 0 ? -(dragAccel * (f.vy / speed)) : 0;
+
+        // Effective gravity minus centrifugal relief from orbital horizontal speed
+        const localG = g0 * Math.pow(R_earth / (R_earth + Math.max(0, f.altM)), 2);
+        const centrifugalAccel = (f.vx * f.vx) / (R_earth + Math.max(0, f.altM));
+        const ayGrav = -2(localG - centrifugalAccel);
+
+        f.vx += (axThrust + axDrag) * dt;
+        f.vy += (ayThrust + ayDrag + ayGrav) * dt;
+
+        // Prevent sinking below launch pad prior to liftoff
+        if (f.altM <= 0 && f.vy < 0 && f.metSec < 4) {
+          f.vy = 0;
+          f.altM = 0;
+        }
+
+        f.downrangeM += f.vx * dt;
+        f.altM += f.vy * dt;
+
+        const altKm = Math.max(0, f.altM / 1000);
+        if (altKm > f.maxAltKm) f.maxAltKm = altKm;
+        if (speed > f.maxSpeed) f.maxSpeed = speed;
+
+        // Check orbital insertion threshold
+        if (altKm >= 155 && Math.abs(f.vx) >= targetOrbitalSpeed * 0.96 && Math.abs(f.vy) < 450) {
+          if (!f.orbitAchieved) {
+            f.orbitAchieved = true;
+            SoundFX.playSuccess();
+            els.simEventLog.textContent = `ORBIT ACHIEVED! Stable trajectory at ${altKm.toFixed(1)} km • ${Math.round(speed)} m/s.`;
+          }
+        }
+
+        // Ground impact check after liftoff
+        if ((f.altM < -5 && f.metSec > 5) && (f.vy>-20)) {
+          f.altM = 0;
+          f.ended = true;
+          SoundFX.stopEngineRumble();
+          SoundFX.playFailure();
+          drawFlightCanvas();
+          populatePostMissionReport(false, false, `Vehicle impacted terrain at ${Math.round(speed)} m/s before achieving stable orbit.`);
+          return;
+        }
+      }
+
+      if (f.sepFlash > 0) f.sepFlash = Math.max(0, f.sepFlash - rawDt * 2.5);
+
+      // Update engine audio attenuation
+      const activeStg = f.stages[f.stageIdx];
+      const isBurning = activeStg && activeStg.fuelMass > 0 && f.throttle > 0 && activeStg.thrust > 0;
+      if (isBurning) {
+        SoundFX.updateEngineRumble(Math.min(100, (f.altM / 1000) * 1.2));
+      } else {
+        SoundFX.updateEngineRumble(100);
+      }
+
+      updateFlightHUD();
+      drawFlightCanvas();
+
+      state.simAnimId = requestAnimationFrame(stepFlightSimulation);
+    }
+
+    function updateFlightHUD() {
+      const f = state.flight;
+      if (!f) return;
+      const m = state.metrics;
+      const orbit = ORBITS[state.orbitId];
+
+      // MET timer
+      const mins = String(Math.floor(f.metSec / 60)).padStart(2, '0');
+      const secs = String(Math.floor(f.metSec % 60)).padStart(2, '0');
+      document.getElementById('simMissionTime').textContent = `MET T+${mins}:${secs}`;
+
+      // Active Stage & Fuel
+      const stg = f.stages[f.stageIdx];
+      const fuelPct = stg && stg.maxFuel > 0 ? Math.round((stg.fuelMass / stg.maxFuel) * 100) : 0;
+      document.getElementById('simStageFuelLabel').textContent = `STG ${f.stageIdx + 1}/${f.stages.length} • FUEL ${fuelPct}%`;
+
+      let remMass = 0;
+      for (let i = f.stageIdx; i < f.stages.length; i++) {
+        remMass += f.stages[i].dryMass + f.stages[i].fuelMass;
+      }
+      const curThrust = stg && stg.fuelMass > 0 ? stg.thrust * f.throttle : 0;
+      const curTwr = remMass > 0 ? curThrust / (remMass * 9.80665) : 0;
+      document.getElementById('simTwrGLabel').textContent = `TWR: ${curTwr.toFixed(2)}g • MASS: ${remMass.toFixed(1)} t`;
+
+      // Altitude, Velocity, Apoapsis / Periapsis estimate
+      const altKm = Math.max(0, f.altM / 1000);
+      const speed = Math.hypot(f.vx, f.vy);
+      const apoKm = Math.max(altKm, altKm + (f.vy > 0 ? (f.vy * f.vy) / (2 * 9.81 * 1000) : 0));
+      const periKm = f.orbitAchieved ? Math.max(155, altKm - 18) : Math.max(0, altKm * (Math.abs(f.vx) / 7800) - 40);
+
+      els.simAltVelLabel.textContent = `${altKm.toFixed(1)} km • ${Math.round(speed).toLocaleString()} m/s`;
+      document.getElementById('simApoPeriLabel').textContent = `APO: ${Math.round(apoKm)} km • PERI: ${Math.round(periKm)} km`;
+
+      const statusTag = document.getElementById('simOrbitStatusTag');
+      if (f.orbitAchieved) {
+        statusTag.textContent = 'ORBIT ACHIEVED';
+        statusTag.className = 'shrink-0 px-2 py-0.5 rounded bg-emerald-500/25 text-emerald-300 font-bold text-[10px] border border-emerald-400/40';
+      } else {
+        statusTag.textContent = 'SUBORBITAL';
+        statusTag.className = 'shrink-0 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px]';
+      }
+
+      document.getElementById('liveVertVel').textContent = `${Math.round(f.vy)} m/s`;
+      document.getElementById('liveHorizVel').textContent = `${Math.round(f.vx)} m/s`;
+      document.getElementById('liveStagePerf').textContent = stg ? `${Math.round(stg.isp)} s • ${Math.round(curThrust).toLocaleString()} kN` : '0 s • 0 kN';
+
+      const sysOk = m.netPower >= 0 && m.eclipseSurvivalMins >= orbit.eclipseMins;
+      const sysEl = document.getElementById('liveSystemsStatus');
+      sysEl.textContent = sysOk ? 'NOMINAL (PWR/COMMS OK)' : 'POWER/ECLIPSE MARGIN LOW';
+      sysEl.className = sysOk ? 'text-emerald-300 font-bold' : 'text-amber-300 font-bold';
+    }
+
+    function drawFlightCanvas() {
+      const canvas = els.flightCanvas;
+      const f = state.flight;
+      if (!canvas || !f) return;
+
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const altKm = Math.max(0, f.altM / 1000);
+
+      // Dynamic sky-to-space atmosphere gradient
+      const spaceBlend = Math.min(1, altKm / 120);
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#030914');
+      grad.addColorStop(0.55, spaceBlend > 0.6 ? '#071426' : '#0c2d57');
+      grad.addColorStop(1, spaceBlend > 0.35 ? '#0b213f' : '#1e4e8c');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Stars in upper atmosphere & space
+      ctx.fillStyle = `rgba(226, 232, 240, ${0.25 + spaceBlend * 0.75})`;
+      for (let i = 0; i < 42; i++) {
+        const sx = -((i * 197 + Math.floor(f.downrangeM * 0.02)) % w + w) % w;
+        const sy = (i * 89) % Math.max(1, h - 60);
+        ctx.fillRect(sx, sy, i % 3 === 0 ? 2 : 1.2, i % 3 === 0 ? 2 : 1.2);
+      }
+
+      // Ground horizon when near surface
+      const groundOffset = altKm * 28;
+      if (groundOffset < h) {
+        const groundY = h - 34 + groundOffset;
+        ctx.fillStyle = '#0a2239';
+        ctx.fillRect(0, groundY, w, h - groundY + 40);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(w, groundY);
+        ctx.stroke();
+
+        // Launch tower silhouette
+        const towerX = w * 0.44 - (f.downrangeM * 0.05);
+        if (towerX > -60 && towerX < w + 60) {
+          ctx.strokeStyle = 'rgba(248, 113, 113, 0.7)';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(towerX, groundY - 75, 14, 75);
+        }
+      }
+
+      // Target Karman / Orbital altitude line indicator
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(0, 62);
+      ctx.lineTo(w, 62);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Stage separation flash effect
+      if (f.sepFlash > 0) {
+        ctx.fillStyle = `rgba(251, 191, 37, ${f.sepFlash * 0.22})`;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Draw Rocket at center screen rotated by pitch angle
+      const rx = w * 0.5;
+      const ry = altKm < 2 ? h - 62 - altKm * 14 : h * 0.52;
+      const rotRad = ((90 - f.pitchDeg) * Math.PI) / 180;
+
+      ctx.save();
+      ctx.translate(rx, ry);
+      ctx.rotate(rotRad);
+
+      // Engine Exhaust Plume
+      const activeStg = f.stages[f.stageIdx];
+      const isFiring = activeStg && activeStg.fuelMass > 0 && f.throttle > 0 && activeStg.thrust > 0;
+      if (isFiring) {
+        const flameLen = (24 + Math.random() * 14) * f.throttle;
+        const flameGrad = ctx.createLinearGradient(0, 26, 0, 26 + flameLen);
+        flameGrad.addColorStop(0, '#ffffff');
+        flameGrad.addColorStop(0.35, '#fbbf26');
+        flameGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+        ctx.fillStyle = flameGrad;
+        ctx.beginPath();
+        ctx.moveTo(-7, 26);
+        ctx.lineTo(7, 26);
+        ctx.lineTo(0, 26 + flameLen);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Rocket Fuselage Body (scaled visually by remaining stages)
+      const remainingStages = f.stages.length - f.stageIdx;
+      const bodyH = 26 + remainingStages * 10;
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.6;
+      ctx.fillRect(-7, 26 - bodyH, 14, bodyH);
+      ctx.strokeRect(-7, 26 - bodyH, 14, bodyH);
+
+      // Roll pattern stripes
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-7, 26 - bodyH + 6, 5, 8);
+      ctx.fillRect(2, 26 - bodyH + 6, 5, 8);
+
+      // Command Capsule Nosecone
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.moveTo(-7, 26 - bodyH);
+      ctx.lineTo(7, 26 - bodyH);
+      ctx.lineTo(0, 14 - bodyH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Stabilizer Fins
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.moveTo(-7, 18);
+      ctx.lineTo(-14, 27);
+      ctx.lineTo(-7, 26);
+      ctx.moveTo(7, 18);
+      ctx.lineTo(14, 27);
+      ctx.lineTo(7, 26);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function finishManualMission() {
+      const f = state.flight;
+      const m = state.metrics;
+      const mission = MISSIONS[state.missionId];
+      const orbit = ORBITS[state.orbitId];
+      if (!f) return;
+
+      f.ended = true;
+      if (state.simAnimId) cancelAnimationFrame(state.simAnimId);
+      SoundFX.stopEngineRumble();
+
+      const altKm = Math.max(0, f.altM / 1000);
+      const speed = Math.hypot(f.vx, f.vy);
+      const targetOrbitalSpeed = orbit.id === 'leo' ? 7800 : orbit.id === 'gto' ? 9200 : 10400;
+
+      const reachedOrbit = f.orbitAchieved || (altKm >= 150 && speed >= targetOrbitalSpeed * 0.92);
+      let failureReason = null;
+
+      if (!reachedOrbit) {
+        failureReason = `Insufficient orbital insertion (${altKm.toFixed(1)} km altitude, ${Math.round(speed).toLocaleString()} m/s vs ${targetOrbitalSpeed.toLocaleString()} m/s required).`;
+      } else if ((m.isCrewed || mission.requireCrew) && !m.hasParachute) {
+        failureReason = 'Crew capsule lacked Triple Parachutes required for safe splashdown recovery.';
+      } else if (m.netPower < 0 || m.eclipseSurvivalMins < orbit.eclipseMins) {
+        failureReason = `Spacecraft power depleted during ${orbit.eclipseMins}-minute orbital eclipse (${m.eclipseSurvivalMins} min battery reserve).`;
+      }
+
+      const isFlightSuccess = failureReason === null;
+      const meetsMissionGoals = isFlightSuccess &&
+        m.effectiveScience >= mission.minScience &&
+        m.totalCost <= mission.budget &&
+        (!mission.requireLander || m.hasLander);
+
+      if (meetsMissionGoals) SoundFX.playSuccess();
+      else if (isFlightSuccess) SoundFX.playWarning();
+      else SoundFX.playFailure();
+
+      populatePostMissionReport(isFlightSuccess, meetsMissionGoals, failureReason);
+    }
+
+    function populatePostMissionReport(isFlightSuccess, meetsMissionGoals, failureReason) {
+      const m = state.metrics;
+      const mission = MISSIONS[state.missionId];
+      const orbit = ORBITS[state.orbitId];
+
+      els.simRunningPlaceholder.classList.add('hidden');
+      els.postMissionReport.classList.remove('hidden');
+
+      const banner = document.getElementById('reportBanner');
+      const verdictTag = document.getElementById('reportVerdictTag');
+      const titleEl = document.getElementById('reportTitle');
+      const rankEl = document.getElementById('reportRank');
+
+      let score = 0;
+      if (isFlightSuccess) {
+        const sciBonus = m.effectiveScience * 10;
+        const budgetBonus = m.totalCost <= mission.budget ? Math.max(0, (mission.budget - m.totalCost) * 4) : 0;
+        score = Math.round(500 + sciBonus + budgetBonus);
+      } else {
+        score = Math.round(Math.min(350, state.flight.maxAltKm * 1.5));
+      }
+
+      let rank = 'F';
+      if (meetsMissionGoals && score >= 1400) rank = 'S';
+      else if (meetsMissionGoals) rank = 'A';
+      else if (isFlightSuccess) rank = 'B';
+      else if (state.flight.maxAltKm >= 100) rank = 'C';
+
+      if (meetsMissionGoals) {
+        banner.className = 'p-3.5 rounded-xl border border-emerald-400/50 bg-emerald-950/50 flex items-center justify-between';
+        verdictTag.className = 'text-[10px] font-mono-tech font-bold uppercase tracking-widest text-emerald-300';
+        verdictTag.textContent = 'MISSION ACCOMPLISHED';
+        titleEl.textContent = `${mission.title} — SUCCESS`;
+        rankEl.className = 'text-2xl font-mono-tech font-extrabold text-emerald-300';
+      } else if (isFlightSuccess) {
+        banner.className = 'p-3.5 rounded-xl border border-amber-400/50 bg-amber-950/50 flex items-center justify-between';
+        verdictTag.className = 'text-[10px] font-mono-tech font-bold uppercase tracking-widest text-amber-300';
+        verdictTag.textContent = 'PARTIAL SUCCESS // OBJECTIVE SHORTFALL';
+        titleEl.textContent = 'ORBIT REACHED — CRITERIA MISSED';
+        rankEl.className = 'text-2xl font-mono-tech font-extrabold text-amber-300';
+      } else {
+        banner.className = 'p-3.5 rounded-xl border border-rose-500/50 bg-rose-950/50 flex items-center justify-between';
+        verdictTag.className = 'text-[10px] font-mono-tech font-bold uppercase tracking-widest text-rose-300';
+        verdictTag.textContent = 'MISSION FAILURE';
+        titleEl.textContent = 'FLIGHT ANOMALY DETECTED';
+        rankEl.className = 'text-2xl font-mono-tech font-extrabold text-rose-400';
+      }
+
+      rankEl.textContent = rank;
+      document.getElementById('repScore').textContent = score.toLocaleString();
+      document.getElementById('repScience').textContent = `${m.effectiveScience} pts`;
+      const effPct = mission.budget > 0 ? Math.max(0, Math.round((1 - Math.max(0, m.totalCost - mission.budget * 0.5) / mission.budget) * 100)) : 100;
+      document.getElementById('repEfficiency').textContent = `${Math.min(100, effPct)}%`;
+
+      const findings = [];
+      if (failureReason) {
+        findings.push(`• <strong class="text-rose-300">Primary Cause:</strong> ${failureReason}`);
+      } else {
+        findings.push(`• <strong class="text-emerald-300">Flight Profile:</strong> Reached ${state.flight.maxAltKm.toFixed(1)} km peak altitude and ${Math.round(state.flight.maxSpeed).toLocaleString()} m/s velocity.`);
+      }
+      findings.push(`• <strong>Science & Comms:</strong> Downlinked ${m.effectiveScience} / ${m.rawSciencePts} Science Pts (${Math.round(m.downlinkEfficiency * 100)}% bandwidth efficiency at ${orbit.id.toUpperCase()}).`);
+      findings.push(`• <strong>Budget Audit:</strong> Spent $${m.totalCost}M of $${mission.budget}M allocated (${m.totalCost <= mission.budget ? 'Within Cap' : 'Over Budget'}).`);
+      if (mission.minScience > 0 && m.effectiveScience < mission.minScience) {
+        findings.push(`• <strong class="text-amber-300">Science Shortfall:</strong> Needed ${mission.minScience} Science Pts (achieved ${m.effectiveScience}). Add more instruments or upgrade comms.`);
+      }
+
+      document.getElementById('reportFindingsList').innerHTML = findings.map(f => `<li>${f}</li>`).join('');
+    }
+
+    /**
+     * ============================================================================
+     * EVENT LISTENERS & INITIALIZATION
+     * ============================================================================
+     */
+    function initEventListeners() {
+      // Mission & Orbit Selectors
+      els.missionSelect.addEventListener('change', e => {
+        SoundFX.playClick();
+        loadMissionPreset(e.target.value);
+      });
+
+      els.orbitSelect.addEventListener('change', e => {
+        SoundFX.playClick();
+        state.orbitId = e.target.value;
+        updateAll();
+      });
+
+      // Category Filter Tabs
+      document.querySelectorAll('.cat-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          SoundFX.playClick();
+          state.categoryFilter = tab.dataset.cat;
+          document.querySelectorAll('.cat-tab').forEach(t => {
+            t.className = 'cat-tab flex-1 py-2 px-2 text-center text-sky-400/70 hover:text-sky-200';
+          });
+          tab.className = 'cat-tab flex-1 py-2 px-2 text-center font-semibold text-sky-300 border-b-2 border-sky-400';
+          renderPalette();
+        });
+      });
+
+      // Audio Toggle
+      document.getElementById('btnToggleAudio').addEventListener('click', () => {
+        SoundFX.enabled = !SoundFX.enabled;
+        document.getElementById('audioIcon').textContent = SoundFX.enabled ? '🔊' : '🔇';
+        document.getElementById('audioLabel').textContent = SoundFX.enabled ? 'SFX ON' : 'MUTED';
+        if (SoundFX.enabled) SoundFX.playClick();
+        else SoundFX.stopEngineRumble();
+      });
+
+      // Auto-Stack & Clear Buttons
+      document.getElementById('btnLoadPreset').addEventListener('click', () => {
+        SoundFX.playClick();
+        loadMissionPreset(state.missionId);
+        showToast('Loaded recommended Saturn V baseline configuration.');
+      });
+
+      document.getElementById('btnClearRocket').addEventListener('click', () => {
+        SoundFX.playRemove();
+        state.stack = [];
+        updateAll();
+      });
+
+      // Drag & Drop into Vehicle Assembly Bay
+      els.assemblyDropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        els.assemblyDropZone.classList.add('drop-zone-active');
+      });
+      els.assemblyDropZone.addEventListener('dragleave', () => {
+        els.assemblyDropZone.classList.remove('drop-zone-active');
+      });
+      els.assemblyDropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        els.assemblyDropZone.classList.remove('drop-zone-active');
+        const compId = e.dataTransfer.getData('text/plain');
+        if (compId) addComponentToStack(compId);
+      });
+
+      // Launch Button
+      document.getElementById('btnLaunchMission').addEventListener('click', () => {
+        SoundFX.playClick();
+        runMissionSimulation();
+      });
+
+      // Simulation Modal Controls
+      document.getElementById('btnCloseSimModal').addEventListener('click', () => {
+        if (state.simAnimId) cancelAnimationFrame(state.simAnimId);
+        if (state.flight) state.flight.ended = true;
+        SoundFX.stopEngineRumble();
+        SoundFX.playClick();
+        els.simulationModal.classList.add('hidden');
+      });
+      document.getElementById('btnModifyDesign').addEventListener('click', () => {
+        if (state.simAnimId) cancelAnimationFrame(state.simAnimId);
+        if (state.flight) state.flight.ended = true;
+        SoundFX.stopEngineRumble();
+        SoundFX.playClick();
+        els.simulationModal.classList.add('hidden');
+      });
+      document.getElementById('btnReplaySim').addEventListener('click', runMissionSimulation);
+      document.getElementById('btnEvaluateMission').addEventListener('click', () => {
+        if (state.flight && !state.flight.ended) {
+          finishManualMission();
+        }
+      });
+
+      // Manual Flight Deck Sliders & Buttons
+      document.getElementById('throttleSlider').addEventListener('input', e => {
+        setFlightThrottle(Number(e.target.value) / 100);
+      });
+      document.getElementById('btnThrottleZero').addEventListener('click', () => {
+        SoundFX.playClick();
+        setFlightThrottle(0);
+      });
+      document.getElementById('btnThrottleMax').addEventListener('click', () => {
+        SoundFX.playClick();
+        setFlightThrottle(1);
+      });
+
+      document.getElementById('pitchSlider').addEventListener('input', e => {
+        setFlightPitch(Number(e.target.value));
+      });
+      document.getElementById('btnPitchLeft').addEventListener('click', () => {
+        if (state.flight) setFlightPitch(state.flight.pitchDeg + 5);
+      });
+      document.getElementById('btnPitchRight').addEventListener('click', () => {
+        if (state.flight) setFlightPitch(state.flight.pitchDeg - 5);
+      });
+      document.getElementById('btnPitchPrograde').addEventListener('click', () => {
+        const f = state.flight;
+        if (!f) return;
+        const speed = Math.hypot(f.vx, f.vy);
+        if (speed > 25) {
+          const progradeDeg = Math.round((Math.atan2(f.vy, f.vx) * 180) / Math.PI);
+          setFlightPitch(progradeDeg);
+          SoundFX.playClick();
+        }
+      });
+
+      document.querySelectorAll('.warp-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          SoundFX.playClick();
+          setFlightWarp(Number(btn.dataset.warp));
+        });
+      });
+
+      document.getElementById('btnStageSep').addEventListener('click', triggerManualStageSeparation);
+
+      // Keyboard Flight Controls (W/S Throttle, A/D Pitch, Space Stage, ,/. Time Warp)
+      window.addEventListener('keydown', e => {
+        if (els.simulationModal.classList.contains('hidden') || !state.flight || state.flight.ended) return;
+        const warps = [1, 3, 8, 20];
+        if (e.key === 'w' || e.key === 'W' || e.key === 'Shift') {
+          e.preventDefault();
+          setFlightThrottle(state.flight.throttle + 0.08);
+        } else if (e.key === 's' || e.key === 'S' || e.key === 'Control') {
+          e.preventDefault();
+          setFlightThrottle(state.flight.throttle - 0.08);
+        } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          setFlightPitch(state.flight.pitchDeg + 3);
+        } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          setFlightPitch(state.flight.pitchDeg - 3);
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          triggerManualStageSeparation();
+        } else if (e.key === '.' || e.key === '>') {
+          const idx = warps.indexOf(state.flight.timeWarp);
+          if (idx < warps.length - 1) setFlightWarp(warps[idx + 1]);
+        } else if (e.key === ',' || e.key === '<') {
+          const idx = warps.indexOf(state.flight.timeWarp);
+          if (idx > 0) setFlightWarp(warps[idx - 1]);
+        }
+      });
+
+      // Field Guide Modal Controls
+      document.getElementById('btnOpenGuide').addEventListener('click', () => {
+        SoundFX.playClick();
+        els.guideModal.classList.remove('hidden');
+      });
+      document.getElementById('btnCloseGuide').addEventListener('click', () => {
+        SoundFX.playClick();
+        els.guideModal.classList.add('hidden');
+      });
+    }
+
+    // Boot Application
+    window.addEventListener('DOMContentLoaded', () => {
+      initEventListeners();
+      renderPalette();
+      loadMissionPreset('leo_obs');
+    });
+  </script>
+</body>
+</html> 
